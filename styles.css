@@ -127,6 +127,9 @@ footer{padding:18px;text-align:center;color:var(--muted)}
 /* Signed-in user menu */
 .signed-in{display:flex;align-items:center;gap:10px}
 .user-bubble{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:var(--surface);font-weight:700}
+.user-bubble{cursor:pointer;transition:transform 160ms ease, box-shadow 160ms ease}
+.user-bubble:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(2,6,23,0.12)}
+.user-bubble:focus{outline:3px solid color-mix(in srgb, var(--accent) 30%, transparent);box-shadow:0 10px 24px rgba(2,6,23,0.14)}
 .user-email{font-size:14px;color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .user-menu{position:relative}
 .menu-dropdown{position:absolute;right:0;top:44px;background:var(--surface);border-radius:10px;box-shadow:var(--shadow);min-width:180px;padding:8px;display:none;flex-direction:column;gap:6px;z-index:90}
