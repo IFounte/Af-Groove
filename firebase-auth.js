@@ -44,6 +44,19 @@
   const appArea = document.getElementById('appArea');
   const heroSection = document.querySelector('.hero');
 
+  // Profile completion helpers (uses localStorage keyed by uid)
+  function profileKey(uid){ return `ag_profile_complete_${uid}`; }
+  function isProfileComplete(uid){
+    if(!uid) return false;
+    try{ return localStorage.getItem(profileKey(uid)) === '1'; }catch(e){ return false; }
+  }
+  function setProfileComplete(uid, val=true){
+    if(!uid) return;
+    try{ localStorage.setItem(profileKey(uid), val ? '1' : '0'); }catch(e){}
+  }
+  // expose helper for later use
+  window.markProfileComplete = function(){ if(auth && auth.currentUser) setProfileComplete(auth.currentUser.uid, true); };
+
   function showAppArea(){
     if(heroSection) heroSection.style.display = 'none';
     if(appArea) appArea.style.display = 'block';
@@ -62,6 +75,9 @@
     // show header auth buttons
     const headerAuth = document.getElementById('headerAuth');
     if(headerAuth) headerAuth.style.display = '';
+    // ensure hero buttons visible
+    const openSign = document.getElementById('openSignin'); if(openSign) openSign.style.display = '';
+    const openStart = document.getElementById('openSignup'); if(openStart) openStart.style.display = '';
   }
 
   function renderSignedIn(user){
@@ -128,6 +144,20 @@
       document.body.appendChild(m);
       m.querySelector('.close').addEventListener('click', ()=>m.remove());
     });
+    // If user hasn't completed initial profile, show hero and hide "Zaten bir hesabım var" button
+    try{
+      const complete = isProfileComplete(user.uid);
+      if(!complete){
+        // show hero section and hide the small 'Zaten bir hesabım var' button in hero
+        if(heroSection) heroSection.style.display = '';
+        const openSign = document.getElementById('openSignin'); if(openSign) openSign.style.display = 'none';
+        // hide app area until they click Start
+        if(appArea) appArea.style.display = 'none';
+      } else {
+        // profile complete -> send to app area
+        showAppArea();
+      }
+    }catch(e){}
   }
 
   // Basic modal UI (DOM creation)
@@ -163,7 +193,18 @@
         } else {
           await auth.signInWithEmailAndPassword(email, pass);
         }
-        modal.remove();
+        // after successful auth, route based on profile completion
+        const user = auth.currentUser;
+        if(user){
+          if(isProfileComplete(user.uid)){
+            modal.remove(); showAppArea();
+          } else {
+            modal.remove();
+            // show hero so user can click Start and fill initial info
+            if(heroSection) heroSection.style.display = '';
+            const openSign = document.getElementById('openSignin'); if(openSign) openSign.style.display = 'none';
+          }
+        } else modal.remove();
       }catch(e){
         errEl.textContent = e.message;
       }
@@ -220,9 +261,12 @@
   openSignup && openSignup.addEventListener('click', ()=>{
     const r = ensureAuthInitialized();
     if(!r.ok){ openSetupModal(r); return; }
-    // if already signed in, go to app area; otherwise open signup modal
-    if(firebaseInitialized && auth && auth.currentUser){ showAppArea(); }
-    else openAuthModal('signup');
+    // if already signed in
+    if(firebaseInitialized && auth && auth.currentUser){
+      // if profile complete -> app, else show hero for initial info
+      if(isProfileComplete(auth.currentUser.uid)) showAppArea();
+      else { if(heroSection) heroSection.style.display = ''; }
+    } else openAuthModal('signup');
   });
   openSignin && openSignin.addEventListener('click', ()=>{
     const r = ensureAuthInitialized();
