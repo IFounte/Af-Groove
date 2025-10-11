@@ -62,6 +62,48 @@
     if(appArea) appArea.style.display = 'block';
     // scroll to app area
     appArea && appArea.scrollIntoView({behavior:'smooth'});
+    // if profile not complete, show profile form inside appArea
+    try{
+      const user = auth && auth.currentUser;
+      if(user && !isProfileComplete(user.uid)){
+        renderProfileForm(user.uid);
+      } else {
+        renderMainForUser();
+      }
+    }catch(e){ renderMainForUser(); }
+  }
+
+  function renderMainForUser(){
+    if(!appArea) return;
+    appArea.innerHTML = `<h2>Af-Groove Ana Sayfa</h2><p>Buraya eğitim içerikleri gelecek.</p>`;
+  }
+
+  function renderProfileForm(uid){
+    if(!appArea) return;
+    appArea.innerHTML = `
+      <div class="profile-form">
+        <h2>Başlangıç Bilgileri</h2>
+        <label>İlgi Alanların (virgülle ayır):</label>
+        <input id="pf_interests" type="text" placeholder="Ör: kodlama, müzik, sanat" />
+        <label>Yaşın:</label>
+        <input id="pf_age" type="number" min="8" max="120" />
+        <div class="profile-actions">
+          <button id="pfSkip" class="btn secondary">Atla</button>
+          <button id="pfSave" class="btn primary">Kaydet ve İlerle</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pfSave').addEventListener('click', ()=>{
+      const interests = document.getElementById('pf_interests').value.trim();
+      const age = document.getElementById('pf_age').value.trim();
+      const payload = {interests, age};
+      try{ localStorage.setItem(`ag_profile_${uid}`, JSON.stringify(payload)); setProfileComplete(uid, true); }catch(e){}
+      renderMainForUser();
+    });
+    document.getElementById('pfSkip').addEventListener('click', ()=>{
+      // still mark as complete to avoid repeat prompts
+      setProfileComplete(uid, true); renderMainForUser();
+    });
   }
 
   function hideAppArea(){
