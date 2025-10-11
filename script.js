@@ -12,46 +12,64 @@
   });
 })();
 
-// Typed animation for welcome text with punctuation transform
+// Typed animation cycling through multiple languages
 (() => {
   const el = document.getElementById('typed');
-  const base = 'Af-Groove\'a hoş geldiniz.'; // We'll transform punctuation
-  const punctSets = [
-    {name:'turkish', map: {'.':'.', "'":'’'}},
-    {name:'french', map: {'.':':', "'":'’'}},
-    {name:'german', map: {'.':',', "'":'’'}},
+  const phrases = [
+    {lang:'tr', text: "Af-Groove'a hoş geldiniz."},
+    {lang:'en', text: "Welcome to Af-Groove."},
+    {lang:'de', text: "Willkommen bei Af-Groove."},
+    {lang:'es', text: "Bienvenido a Af-Groove."},
+    {lang:'fr', text: "Bienvenue chez Af-Groove."},
+    {lang:'ar', text: "مرحبا بكم في Af-Groove."}
   ];
 
-  let setIdx = 0;
+  let idx = 0;
 
-  function mapPunct(text, map){
-    return text.split('').map(ch => map[ch] || ch).join('');
+  function setDirection(lang){
+    if(lang === 'ar'){
+      el.style.direction = 'rtl';
+      el.style.textAlign = 'right';
+    } else {
+      el.style.direction = 'ltr';
+      el.style.textAlign = 'left';
+    }
   }
 
-  function typeText(text, cb){
-    let i=0; el.textContent='';
-    const t = setInterval(()=>{
-      el.textContent += text[i++]||'';
-      if(i>text.length){ clearInterval(t); setTimeout(cb, 900); }
-    }, 45);
-  }
-
-  function cycle(){
-    const set = punctSets[setIdx%punctSets.length];
-    const mapped = mapPunct(base, set.map);
-    typeText(mapped, ()=>{
-      // simple fade-out
-      el.style.transition = 'opacity 600ms ease';
-      el.style.opacity = '0';
-      setTimeout(()=>{
-        el.style.opacity = '1';
-        setIdx++;
-        cycle();
-      }, 600);
+  async function typeAndDelete(phrase){
+    return new Promise(resolve=>{
+      setDirection(phrase.lang);
+      const text = phrase.text;
+      el.textContent = '';
+      el.style.opacity = '1';
+      let i = 0;
+      const typer = setInterval(()=>{
+        el.textContent += text[i++] || '';
+        if(i > text.length){ clearInterval(typer);
+          setTimeout(()=>{
+            // delete
+            let j = text.length;
+            const deleter = setInterval(()=>{
+              el.textContent = text.slice(0,j--);
+              if(j < 0){ clearInterval(deleter); resolve(); }
+            }, 35);
+          }, 900);
+        }
+      }, 45);
     });
   }
 
-  cycle();
+  async function run(){
+    while(true){
+      const phrase = phrases[idx % phrases.length];
+      await typeAndDelete(phrase);
+      idx++;
+      // small pause between phrases
+      await new Promise(r=>setTimeout(r, 300));
+    }
+  }
+
+  run();
 })();
 
 // Year

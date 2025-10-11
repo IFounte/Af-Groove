@@ -6,6 +6,7 @@
   // that late-loaded scripts or slight ordering issues won't prevent auth from working.
   let auth = null;
   let firebaseInitialized = false;
+  let firstInitHandled = false;
 
   function ensureAuthInitialized(){
     const hasFirebase = (typeof firebase !== 'undefined');
@@ -21,8 +22,13 @@
         firebaseInitialized = true;
         // start observing auth state
         auth.onAuthStateChanged(user=>{
-          if(user) renderSignedIn(user);
-          else renderSignedOut();
+          if(user) {
+            renderSignedIn(user);
+            // on first init, auto-show app area for returning users
+            if(!firstInitHandled){ firstInitHandled = true; if(user) showAppArea(); }
+          } else {
+            renderSignedOut();
+          }
         });
       }catch(e){
         console.error('Error initializing Firebase (might already be initialized):', e);
@@ -35,6 +41,20 @@
   const userArea = document.getElementById('userArea');
   const openSignup = document.getElementById('openSignup');
   const openSignin = document.getElementById('openSignin');
+  const appArea = document.getElementById('appArea');
+  const heroSection = document.querySelector('.hero');
+
+  function showAppArea(){
+    if(heroSection) heroSection.style.display = 'none';
+    if(appArea) appArea.style.display = 'block';
+    // scroll to app area
+    appArea && appArea.scrollIntoView({behavior:'smooth'});
+  }
+
+  function hideAppArea(){
+    if(appArea) appArea.style.display = 'none';
+    if(heroSection) heroSection.style.display = '';
+  }
 
   function renderSignedOut(){
     // Keep userArea minimal when signed-out; use header buttons for auth actions.
@@ -60,10 +80,16 @@
   const headerAuth = document.getElementById('headerAuth');
   if(headerAuth) headerAuth.style.display = 'none';
 
-  const bubble = document.getElementById('userBubble');
+    const bubble = document.getElementById('userBubble');
     const dropdown = document.getElementById('menuDropdown');
+    // make bubble keyboard accessible
+    bubble.setAttribute('tabindex', '0');
+    bubble.setAttribute('role', 'button');
     bubble.addEventListener('click', (ev)=>{
       ev.stopPropagation(); dropdown.classList.toggle('show');
+    });
+    bubble.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); dropdown.classList.toggle('show'); }
     });
 
     // close dropdown on outside click
@@ -193,7 +219,10 @@
   // Wire buttons
   openSignup && openSignup.addEventListener('click', ()=>{
     const r = ensureAuthInitialized();
-    if(r.ok) openAuthModal('signup'); else openSetupModal(r);
+    if(!r.ok){ openSetupModal(r); return; }
+    // if already signed in, go to app area; otherwise open signup modal
+    if(firebaseInitialized && auth && auth.currentUser){ showAppArea(); }
+    else openAuthModal('signup');
   });
   openSignin && openSignin.addEventListener('click', ()=>{
     const r = ensureAuthInitialized();
