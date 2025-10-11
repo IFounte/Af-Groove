@@ -236,8 +236,13 @@
       const pass = modal.querySelector('#authPass').value;
       const errEl = modal.querySelector('.auth-error');
       errEl.textContent = '';
-      if(!firebaseAvailable){
-        errEl.textContent = 'Firebase yapılandırması eksik. Lütfen proje kökünde firebase-config.js oluşturun.';
+      // Basic validation
+      if(!email || !pass){ errEl.textContent = 'Lütfen e-posta ve parola girin.'; return; }
+      // Ensure Firebase is initialized and auth is available
+      const r = ensureAuthInitialized();
+      if(!r.ok){
+        // Show setup modal with details (keeps UX consistent with Google flow)
+        openSetupModal(r);
         return;
       }
       try{
@@ -259,7 +264,8 @@
           }
         } else modal.remove();
       }catch(e){
-        errEl.textContent = e.message;
+        // Show friendly error (Firebase messages are ok for now)
+        errEl.textContent = e && e.message ? e.message : 'Giriş sırasında hata oluştu.';
       }
     });
 
