@@ -48,6 +48,7 @@ header.top{
 .header-auth{display:flex;gap:8px;align-items:center}
 .header-auth .btn.primary{padding:10px 14px;border-radius:10px}
 .header-auth .btn.secondary{padding:10px 12px;border-radius:10px}
+/* ghost test button removed */
 .theme-toggle{order:2}
 .header-auth{order:1}
 

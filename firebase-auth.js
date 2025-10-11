@@ -24,8 +24,18 @@
         auth.onAuthStateChanged(user=>{
           if(user) {
             renderSignedIn(user);
-            // on first init, auto-show app area for returning users
-            if(!firstInitHandled){ firstInitHandled = true; if(user) showAppArea(); }
+            // on first init, auto-show app area only for users who already completed profile
+            if(!firstInitHandled){
+              firstInitHandled = true;
+              try{
+                if(isProfileComplete(user.uid)){
+                  showAppArea();
+                } else {
+                  // ensure hero is visible so they can click Start
+                  if(heroSection) heroSection.style.display = '';
+                }
+              }catch(e){ if(heroSection) heroSection.style.display = ''; }
+            }
           } else {
             renderSignedOut();
           }
@@ -117,7 +127,8 @@
     // show header auth buttons
     const headerAuth = document.getElementById('headerAuth');
     if(headerAuth) headerAuth.style.display = '';
-    // ensure hero buttons visible
+    // ensure hero section and its buttons are visible
+    if(heroSection) heroSection.style.display = '';
     const openSign = document.getElementById('openSignin'); if(openSign) openSign.style.display = '';
     const openStart = document.getElementById('openSignup'); if(openStart) openStart.style.display = '';
   }
@@ -326,6 +337,8 @@
     const r = ensureAuthInitialized();
     if(r.ok) openAuthModal('signin'); else openSetupModal(r);
   });
+
+  // (debug helpers removed) — no test clear UI or global console helpers remain
 
   // header Google button removed — Google sign-in now appears inside modal as a small icon
 
