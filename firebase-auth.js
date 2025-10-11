@@ -39,6 +39,9 @@
   function renderSignedOut(){
     // Keep userArea minimal when signed-out; use header buttons for auth actions.
     userArea.innerHTML = '';
+    // show header auth buttons
+    const headerAuth = document.getElementById('headerAuth');
+    if(headerAuth) headerAuth.style.display = '';
   }
 
   function renderSignedIn(user){
@@ -53,7 +56,11 @@
       </div>
     `;
 
-    const bubble = document.getElementById('userBubble');
+  // hide header auth buttons when signed in
+  const headerAuth = document.getElementById('headerAuth');
+  if(headerAuth) headerAuth.style.display = 'none';
+
+  const bubble = document.getElementById('userBubble');
     const dropdown = document.getElementById('menuDropdown');
     bubble.addEventListener('click', (ev)=>{
       ev.stopPropagation(); dropdown.classList.toggle('show');
@@ -105,10 +112,10 @@
       <div class="auth-card">
         <button class="close">×</button>
         <h3>${mode === 'signup' ? 'Kayıt Ol' : 'Giriş Yap'}</h3>
-        <button id="googleModalBtn" class="btn google">Google ile</button>
         <input id="authEmail" type="email" placeholder="E-posta" />
         <input id="authPass" type="password" placeholder="Parola" />
         <button id="authSubmit" class="btn primary">${mode === 'signup' ? 'Kayıt Ol' : 'Giriş Yap'}</button>
+        <div id="googleWrap" style="display:flex;align-items:center;gap:10px;margin-top:12px"></div>
         <p class="auth-switch">${mode === 'signup' ? 'Zaten bir hesabın var mı? <a href="#" id="toSignin">Giriş yap</a>' : 'Hesabın yok mu? <a href="#" id="toSignup">Kayıt ol</a>'}</p>
         <div class="auth-error" aria-live="polite"></div>
       </div>
@@ -139,18 +146,25 @@
     modal.querySelector('#toSignup')?.addEventListener('click',(ev)=>{ev.preventDefault(); modal.remove(); openAuthModal('signup');});
     modal.querySelector('#toSignin')?.addEventListener('click',(ev)=>{ev.preventDefault(); modal.remove(); openAuthModal('signin');});
 
-    // Google sign-in inside modal
-    modal.querySelector('#googleModalBtn')?.addEventListener('click', async ()=>{
-      const r = ensureAuthInitialized();
-      if(!r.ok){ openSetupModal(r); return; }
-      try{
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithPopup(provider);
-        modal.remove();
-      }catch(e){
-        modal.querySelector('.auth-error').textContent = e.message;
-      }
-    });
+    // Google sign-in inside modal (small icon button)
+    const googleWrap = modal.querySelector('#googleWrap');
+    if(googleWrap){
+      const gbtn = document.createElement('button');
+      gbtn.className = 'btn google-icon';
+      gbtn.title = 'Google ile giriş';
+      // small Google 'G' svg
+      gbtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21.35 11.1h-9.2v2.8h5.2c-.23 1.3-1.1 2.4-2.35 3.05v2.55h3.8c2.22-2.05 3.5-5.05 3.5-8.45 0-.8-.07-1.55-.2-2.25z" fill="#4285F4"/><path d="M12.15 22c2.7 0 4.95-.9 6.6-2.45l-3.8-2.55c-1.05.7-2.4 1.15-3.8 1.15-2.9 0-5.35-1.95-6.23-4.6H2.06v2.9C3.7 19.95 7.6 22 12.15 22z" fill="#34A853"/><path d="M5.92 13c-.2-.6-.33-1.25-.33-1.9s.12-1.3.33-1.9V6.3H2.06C1.35 7.55.9 9.15.9 10.1s.45 2.55 1.16 3.8l3.8-1.9z" fill="#FBBC05"/><path d="M12.15 4.6c1.47 0 2.8.5 3.85 1.45l2.9-2.9C16.95 1.45 14.7.6 12.15.6 7.6.6 3.7 2.65 2.06 5.95l3.86 2.9C6.8 6.55 9.25 4.6 12.15 4.6z" fill="#EA4335"/></svg>`;
+      googleWrap.appendChild(gbtn);
+      gbtn.addEventListener('click', async ()=>{
+        const r = ensureAuthInitialized();
+        if(!r.ok){ openSetupModal(r); return; }
+        try{
+          const provider = new firebase.auth.GoogleAuthProvider();
+          await auth.signInWithPopup(provider);
+          modal.remove();
+        }catch(e){ modal.querySelector('.auth-error').textContent = e.message; }
+      });
+    }
   }
 
   // If Firebase isn't available, provide a simple setup modal for the header button
@@ -198,16 +212,7 @@
     if(r.ok) openAuthModal('signin'); else openSetupModal(r);
   });
 
-  // Header Google button
-  const headerGoogleBtn = document.getElementById('headerGoogleBtn');
-  headerGoogleBtn && headerGoogleBtn.addEventListener('click', async ()=>{
-    const r = ensureAuthInitialized();
-    if(!r.ok){ openSetupModal(r); return; }
-    try{
-      const provider = new firebase.auth.GoogleAuthProvider();
-      await auth.signInWithPopup(provider);
-    }catch(e){ console.error(e); alert('Google ile giriş başarısız: '+e.message); }
-  });
+  // header Google button removed — Google sign-in now appears inside modal as a small icon
 
   // Auth state observer (only if auth available)
   // If Firebase is already present + config available, initialize right away.
