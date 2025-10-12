@@ -90,12 +90,13 @@
 
   function renderProfileForm(uid){
     if(!appArea) return;
-    // interest options using local asset images
+    // interest options using realistic photos from Unsplash (requires internet)
+    // These are dynamic queries that return a relevant photo; feel free to replace with your own hosted images.
     const interests = [
-      {id:'baglama', label:'Bağlama', img: 'assets/baglama.svg'},
-      {id:'ney', label:'Ney', img: 'assets/ney.svg'},
-      {id:'resim', label:'Resim', img: 'assets/resim.svg'},
-      {id:'halk', label:'Halk Oyunları', img: 'assets/halk.svg'}
+      {id:'baglama', label:'Bağlama', img: 'https://source.unsplash.com/600x400/?saz,baglama,music'},
+      {id:'ney', label:'Ney', img: 'https://source.unsplash.com/600x400/?ney,flute,music'},
+      {id:'resim', label:'Resim', img: 'https://source.unsplash.com/600x400/?painting,art,canvas'},
+      {id:'halk', label:'Halk Oyunları', img: 'https://source.unsplash.com/600x400/?folk,dance,traditional'}
     ];
 
     appArea.innerHTML = `
