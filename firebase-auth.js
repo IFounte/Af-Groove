@@ -90,34 +90,36 @@
 
   function renderProfileForm(uid){
     if(!appArea) return;
-    // interest options with inline SVG thumbnails
+    // interest options using local asset images
     const interests = [
-      {id:'baglama', label:'Bağlama', img: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'><rect width='64' height='48' rx='6' fill='#f7efe6'/><path d='M12 36c8-6 20-10 28-4' stroke='#a65' stroke-width='2' fill='none'/><circle cx='36' cy='30' r='6' fill='#fff3e6' stroke='#a65'/></svg>`},
-      {id:'ney', label:'Ney', img:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'><rect width='64' height='48' rx='6' fill='#eef7f3'/><rect x='10' y='14' width='44' height='6' rx='3' fill='#c4e6d8'/><circle cx='18' cy='17' r='2' fill='#7bbfa7'/></svg>`},
-      {id:'resim', label:'Resim', img:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'><rect width='64' height='48' rx='6' fill='#f3f5ff'/><rect x='8' y='10' width='48' height='28' rx='4' fill='#dfe8ff'/><circle cx='22' cy='24' r='4' fill='#9bb1ff'/><path d='M24 34c4-3 10-6 16-2l6 4' stroke='#5973d6' stroke-width='1.5' fill='none'/></svg>`},
-      {id:'halk', label:'Halk Oyunları', img:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'><rect width='64' height='48' rx='6' fill='#fff7ef'/><path d='M12 34c4-6 10-10 20-8s18 8 20 8' stroke='#ff9d66' stroke-width='2' fill='none'/><circle cx='20' cy='20' r='3' fill='#ffd6b0'/></svg>`}
+      {id:'baglama', label:'Bağlama', img: 'assets/baglama.svg'},
+      {id:'ney', label:'Ney', img: 'assets/ney.svg'},
+      {id:'resim', label:'Resim', img: 'assets/resim.svg'},
+      {id:'halk', label:'Halk Oyunları', img: 'assets/halk.svg'}
     ];
 
     appArea.innerHTML = `
       <div class="profile-form">
         <h2>Başlangıç Bilgileri</h2>
-        <label>İlgi Alanların:</label>
-        <div class="interest-grid" id="interestGrid"></div>
-        <label>Yaşın:</label>
-        <input id="pf_age" type="number" min="8" max="120" />
-        <div class="profile-actions">
-          <button id="pfSkip" class="btn secondary">Atla</button>
-          <button id="pfSave" class="btn primary">Kaydet ve İlerle</button>
+        <div id="stepInterests">
+          <label>İlgi Alanların (en az birini seç):</label>
+          <div class="interest-grid" id="interestGrid"></div>
+          <div class="profile-actions"><button id="pfNext" class="btn primary">Devam</button></div>
+        </div>
+        <div id="stepAge" style="display:none">
+          <label>Yaşın:</label>
+          <input id="pf_age" type="number" min="8" max="120" />
+          <div class="profile-actions"><button id="pfSave" class="btn primary">Kaydet ve İlerle</button></div>
         </div>
       </div>
     `;
 
     const grid = document.getElementById('interestGrid');
     const selected = new Set();
-    // render cards
+    // render cards with real images
     interests.forEach(it =>{
       const card = document.createElement('div'); card.className='interest-card'; card.setAttribute('data-id', it.id);
-      card.innerHTML = `<div class="thumb">${it.img}</div><div class="label">${it.label}</div>`;
+      card.innerHTML = `<div class="thumb"><img src="${it.img}" alt="${it.label}"/></div><div class="label">${it.label}</div>`;
       card.addEventListener('click', ()=>{
         if(card.classList.contains('selected')){ card.classList.remove('selected'); selected.delete(it.id); }
         else { card.classList.add('selected'); selected.add(it.id); }
@@ -125,14 +127,18 @@
       grid.appendChild(card);
     });
 
+    document.getElementById('pfNext').addEventListener('click', ()=>{
+      if(selected.size === 0){ alert('Lütfen en az bir ilgi alanı seçin.'); return; }
+      document.getElementById('stepInterests').style.display = 'none';
+      document.getElementById('stepAge').style.display = '';
+    });
+
     document.getElementById('pfSave').addEventListener('click', ()=>{
       const age = document.getElementById('pf_age').value.trim();
+      if(!age){ alert('Lütfen yaşınızı girin.'); return; }
       const payload = { interests: Array.from(selected), age };
       try{ localStorage.setItem(`ag_profile_${uid}`, JSON.stringify(payload)); setProfileComplete(uid, true); }catch(e){ console.error(e); }
       renderMainForUser();
-    });
-    document.getElementById('pfSkip').addEventListener('click', ()=>{
-      setProfileComplete(uid, true); renderMainForUser();
     });
   }
 
