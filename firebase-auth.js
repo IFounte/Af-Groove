@@ -246,21 +246,29 @@
         return;
       }
       try{
+        let user = null;
         if(mode === 'signup'){
-          await auth.createUserWithEmailAndPassword(email, pass);
+          const cred = await auth.createUserWithEmailAndPassword(email, pass);
+          // prefer the user from the returned credential
+          user = cred && cred.user ? cred.user : auth.currentUser;
         } else {
           await auth.signInWithEmailAndPassword(email, pass);
+          user = auth.currentUser;
         }
         // after successful auth, route based on profile completion
-        const user = auth.currentUser;
         if(user){
-          if(isProfileComplete(user.uid)){
+          // If this was a fresh signup, immediately send them to the app area (survey)
+          if(mode === 'signup'){
             modal.remove(); showAppArea();
           } else {
-            modal.remove();
-            // show hero so user can click Start and fill initial info
-            if(heroSection) heroSection.style.display = '';
-            const openSign = document.getElementById('openSignin'); if(openSign) openSign.style.display = 'none';
+            if(isProfileComplete(user.uid)){
+              modal.remove(); showAppArea();
+            } else {
+              modal.remove();
+              // show hero so user can click Start and fill initial info
+              if(heroSection) heroSection.style.display = '';
+              const openSign = document.getElementById('openSignin'); if(openSign) openSign.style.display = 'none';
+            }
           }
         } else modal.remove();
       }catch(e){
