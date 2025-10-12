@@ -363,6 +363,16 @@
     });
   }
 
+  // Debug helper: force-render profile form for current user or a specific uid
+  window.debugShowProfile = function(uid){
+    try{
+      const targetUid = uid || (window.firebase && window.firebase.auth && window.firebase.auth().currentUser && window.firebase.auth().currentUser.uid);
+      if(!targetUid) return console.warn('No uid available. Sign in first or pass uid to debugShowProfile(uid)');
+      // renderProfileForm is in closure scope, call it
+      renderProfileForm(targetUid);
+    }catch(e){ console.error('debugShowProfile error', e); }
+  };
+
   // Wire buttons
   openSignup && openSignup.addEventListener('click', ()=>{
     const r = ensureAuthInitialized();
