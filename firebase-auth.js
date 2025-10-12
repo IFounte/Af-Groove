@@ -231,7 +231,7 @@
     `;
     document.body.appendChild(modal);
     modal.querySelector('.close').addEventListener('click', ()=>modal.remove());
-    modal.querySelector('#authSubmit').addEventListener('click', async ()=>{
+  modal.querySelector('#authSubmit').addEventListener('click', async ()=>{
       const email = modal.querySelector('#authEmail').value.trim();
       const pass = modal.querySelector('#authPass').value;
       const errEl = modal.querySelector('.auth-error');
@@ -264,8 +264,9 @@
           }
         } else modal.remove();
       }catch(e){
-        // Show friendly error (Firebase messages are ok for now)
-        errEl.textContent = e && e.message ? e.message : 'Giriş sırasında hata oluştu.';
+        // Translate common Firebase errors to Turkish
+        const code = e && e.code ? e.code : null;
+        errEl.textContent = translateAuthError(code, e && e.message ? e.message : 'Giriş sırasında hata oluştu.');
       }
     });
 
@@ -288,9 +289,27 @@
           const provider = new firebase.auth.GoogleAuthProvider();
           await auth.signInWithPopup(provider);
           modal.remove();
-        }catch(e){ modal.querySelector('.auth-error').textContent = e.message; }
+  }catch(e){ modal.querySelector('.auth-error').textContent = translateAuthError(e && e.code ? e.code : null, e && e.message ? e.message : 'Giriş sırasında hata oluştu.'); }
       });
     }
+  }
+
+  // Map Firebase auth error codes to Turkish messages
+  function translateAuthError(code, fallback){
+    const map = {
+      'auth/invalid-email': 'Geçersiz e-posta adresi.',
+      'auth/user-disabled': 'Bu kullanıcı devre dışı bırakılmış.',
+      'auth/user-not-found': 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.',
+      'auth/wrong-password': 'Parola yanlış.',
+      'auth/email-already-in-use': 'Bu e-posta zaten kullanılıyor.',
+      'auth/weak-password': 'Parola çok zayıf. En az 6 karakter girin.',
+      'auth/operation-not-allowed': 'E-posta/parola ile kimlik doğrulama izinli değil.',
+      'auth/popup-blocked': 'Popup engellendi. Tarayıcı ayarlarınıza bakın veya farklı bir tarayıcı deneyin.',
+      'auth/popup-closed-by-user': 'Popup kullanıcı tarafından kapatıldı.',
+      'auth/cancelled-popup-request': 'Popup isteği iptal edildi.',
+      'auth/network-request-failed': 'Ağ hatası. İnternet bağlantınızı kontrol edin.'
+    };
+    return (code && map[code]) ? map[code] : (fallback || 'Kimlik doğrulama sırasında hata oluştu.');
   }
 
   // If Firebase isn't available, provide a simple setup modal for the header button
@@ -320,12 +339,32 @@
   openSignup && openSignup.addEventListener('click', ()=>{
     const r = ensureAuthInitialized();
     if(!r.ok){ openSetupModal(r); return; }
-    // if already signed in
-    if(firebaseInitialized && auth && auth.currentUser){
-      // if profile complete -> app, else show hero for initial info
-      if(isProfileComplete(auth.currentUser.uid)) showAppArea();
-      else { if(heroSection) heroSection.style.display = ''; }
-    } else openAuthModal('signup');
+    // If user is already signed in, go to the app area (which will render profile form if needed).
+    if(firebaseInitialized && auth){
+      if(auth.currentUser){
+        showAppArea();
+      } else {
+        // Sometimes auth.currentUser is not immediately available right after createUserWithEmailAndPassword.
+        // Retry briefly (up to ~2s) before falling back to opening the signup modal.
+        let attempts = 0;
+        const maxAttempts = 20; // ~2 seconds
+        const tryShow = () => {
+          attempts++;
+          if(auth.currentUser){
+            showAppArea();
+          } else if(attempts < maxAttempts){
+            setTimeout(tryShow, 100);
+          } else {
+            // Fallback: show signup modal so user can sign in manually
+            openAuthModal('signup');
+          }
+        };
+        tryShow();
+      }
+    } else {
+      // Not initialized or not signed in yet -> open signup modal
+      openAuthModal('signup');
+    }
   });
   openSignin && openSignin.addEventListener('click', ()=>{
     const r = ensureAuthInitialized();
