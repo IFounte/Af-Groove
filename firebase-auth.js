@@ -130,17 +130,20 @@
     }catch(e){ console.warn('Error reading profile for picked slides', e); }
 
     appArea.innerHTML = `
-      <div style="padding:8px 12px">
-        <h2>Yeni İlgi Alanları</h2>
-        <div class="slider" id="mainSlider">
-          <div class="slides" id="slides"></div>
-        </div>
-        <div class="dots" id="sliderDots"></div>
+      <!-- Slider pinned to top (no heading) -->
+      <div class="slider slider-top" id="mainSlider">
+        <div class="slides" id="slides"></div>
       </div>
+      <div class="dots" id="sliderDots"></div>
 
       <section style="padding:14px 18px">
         <h2>İlgi Alanlarınız</h2>
         <div class="cards-row" id="cardsRow"></div>
+      </section>
+
+      <section style="padding:14px 18px">
+        <h2>Yeni İlgi Alanları</h2>
+        <div class="cards-row" id="allInterestsRow"></div>
       </section>
     `;
 
@@ -168,8 +171,8 @@
       dot.addEventListener('click', ()=>{ goToSlide(idx); resetAuto(); });
     });
 
-    // Render picked cards (compact) BELOW the slider
-    const cardsRow = document.getElementById('cardsRow');
+  // Render picked cards (compact) BELOW the slider
+  const cardsRow = document.getElementById('cardsRow');
     if(pickedSlides.length === 0){
       // No picks: show all slides in a different deterministic order (rotate by 1)
       const rotated = allSlides.slice(1).concat(allSlides.slice(0,1));
@@ -557,6 +560,18 @@
   }catch(e){ modal.querySelector('.auth-error').textContent = translateAuthError(e && e.code ? e.code : null, e && e.message ? e.message : 'Giriş sırasında hata oluştu.'); }
       });
     }
+
+    // Populate the 'Yeni İlgi Alanları' all-interests row (show all categories)
+    try{
+      const allRow = document.getElementById('allInterestsRow');
+      if(allRow){
+        allSlides.forEach(s=>{
+          const c = document.createElement('div'); c.className='mini-card';
+          c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
+          allRow.appendChild(c);
+        });
+      }
+    }catch(e){console.warn('Could not populate allInterestsRow', e);} 
   }
 
   // Map Firebase auth error codes to Turkish messages
