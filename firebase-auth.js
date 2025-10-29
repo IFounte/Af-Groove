@@ -85,18 +85,72 @@
 
   function renderMainForUser(){
     if(!appArea) return;
-    appArea.innerHTML = `<h2>Af-Groove Ana Sayfa</h2><p>Buraya eğitim içerikleri gelecek.</p>`;
+    // Slider slides based on our interest areas
+    const slides = [
+      {id:'baglama', title:'Bağlama Eğitimi', img: encodeURI('assets/Bağlama_yatay.png'), desc:'Bağlama çalmayı öğrenin: akorlar, ritimler ve repertuar.'},
+      {id:'ney', title:'Ney ve Üflemeli Çalgılar', img: encodeURI('assets/Ney_yatay.png'), desc:'Ney teknikleri ve nefes çalışmaları ile müzikal yolculuğunuzu başlatın.'},
+      {id:'gorsel', title:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png'), desc:'Resim, kompozisyon ve farklı tekniklerle yaratıcılığınızı keşfedin.'},
+      {id:'halk', title:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png'), desc:'Yerel dans stilleri ve koreografilerle kültürel mirası yaşayın.'}
+    ];
+
+    appArea.innerHTML = `
+      <div class="slider" id="mainSlider">
+        <div class="slides" id="slides"></div>
+      </div>
+      <div class="dots" id="sliderDots"></div>
+      <section style="padding:18px">
+        <h2>Af-Groove Ana Sayfa</h2>
+        <p>Seçtiğiniz ilgi alanlarına göre kişiselleştirilmiş içerikler gösterilecektir.</p>
+      </section>
+    `;
+
+    const slidesEl = document.getElementById('slides');
+    const dotsEl = document.getElementById('sliderDots');
+    slides.forEach((s, idx)=>{
+      const slide = document.createElement('div'); slide.className='slide';
+      slide.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="slide-caption"><h3>${s.title}</h3><p>${s.desc}</p></div>`;
+      slidesEl.appendChild(slide);
+      const dot = document.createElement('div'); dot.className='dot'; dot.dataset.idx = idx; dotsEl.appendChild(dot);
+      dot.addEventListener('click', ()=>{ goToSlide(idx); resetAuto(); });
+    });
+
+    let current = 0;
+    const total = slides.length;
+    const update = ()=>{
+      slidesEl.style.transform = `translateX(-${current*100}%)`;
+      Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i===current));
+    };
+    function goToSlide(i){ current = (i+total)%total; update(); }
+    function next(){ current = (current+1)%total; update(); }
+
+    // Auto-advance every 10s
+    let auto = setInterval(next, 10000);
+    function resetAuto(){ clearInterval(auto); auto = setInterval(next, 10000); }
+
+    // Pause on hover
+    const slider = document.getElementById('mainSlider');
+    slider.addEventListener('mouseenter', ()=> clearInterval(auto));
+    slider.addEventListener('mouseleave', ()=> { resetAuto(); });
+
+    // Drag/Swipe support
+    let startX = 0; let isDown = false; let moved = false;
+    slidesEl.addEventListener('pointerdown', (e)=>{ isDown=true; startX = e.clientX; slidesEl.setPointerCapture(e.pointerId); });
+    slidesEl.addEventListener('pointermove', (e)=>{ if(!isDown) return; const dx = e.clientX - startX; if(Math.abs(dx) > 40){ moved = true; if(dx > 0) { goToSlide(current-1); startX = e.clientX; resetAuto(); } else { goToSlide(current+1); startX = e.clientX; resetAuto(); } } });
+    slidesEl.addEventListener('pointerup', (e)=>{ isDown=false; moved=false; });
+    slidesEl.addEventListener('pointercancel', ()=>{ isDown=false; moved=false; });
+
+    // initial state
+    update();
   }
 
   function renderProfileForm(uid){
     if(!appArea) return;
-    // interest options using realistic photos from Unsplash (requires internet)
-    // These are dynamic queries that return a relevant photo; feel free to replace with your own hosted images.
+    // interest options using local assets (use your assets/*.png files)
     const interests = [
-      {id:'baglama', label:'Bağlama', img: 'https://source.unsplash.com/600x400/?saz,baglama,music'},
-      {id:'ney', label:'Ney', img: 'https://source.unsplash.com/600x400/?ney,flute,music'},
-      {id:'resim', label:'Resim', img: 'https://source.unsplash.com/600x400/?painting,art,canvas'},
-      {id:'halk', label:'Halk Oyunları', img: 'https://source.unsplash.com/600x400/?folk,dance,traditional'}
+      {id:'baglama', label:'Bağlama', img: encodeURI('assets/Bağlama_yatay.png')},
+      {id:'ney', label:'Ney', img: encodeURI('assets/Ney_yatay.png')},
+      {id:'gorsel', label:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png')},
+      {id:'halk', label:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png')}
     ];
 
     appArea.innerHTML = `
