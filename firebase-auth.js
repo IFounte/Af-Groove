@@ -214,6 +214,20 @@
       }
     }
 
+    // Populate the 'Yeni İlgi Alanları' all-interests grid (show all categories)
+    try{
+      const allRow = document.getElementById('allInterestsRow');
+      if(allRow){
+        // clear any existing children
+        allRow.innerHTML = '';
+        allSlides.forEach(s=>{
+          const c = document.createElement('div'); c.className='interest-card'; c.setAttribute('data-id', s.id);
+          c.innerHTML = `<div class="thumb"><img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/></div><div class="label">${s.title}</div><div class="desc">${s.desc}</div>`;
+          allRow.appendChild(c);
+        });
+      }
+    }catch(e){console.warn('Could not populate allInterestsRow', e);} 
+
     let current = 0;
     const total = sliderSlides.length;
     const update = ()=>{
@@ -561,17 +575,7 @@
       });
     }
 
-    // Populate the 'Yeni İlgi Alanları' all-interests row (show all categories)
-    try{
-      const allRow = document.getElementById('allInterestsRow');
-      if(allRow){
-        allSlides.forEach(s=>{
-          const c = document.createElement('div'); c.className='interest-card'; c.setAttribute('data-id', s.id);
-          c.innerHTML = `<div class="thumb"><img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/></div><div class="label">${s.title}</div><div class="desc">${s.desc}</div>`;
-          allRow.appendChild(c);
-        });
-      }
-    }catch(e){console.warn('Could not populate allInterestsRow', e);} 
+    
   }
 
   // Map Firebase auth error codes to Turkish messages
