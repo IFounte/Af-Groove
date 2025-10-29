@@ -70,8 +70,6 @@
   function showAppArea(){
     if(heroSection) heroSection.style.display = 'none';
     if(appArea) appArea.style.display = 'block';
-    // hide homepage slider while in app area
-    try{ const s = document.getElementById('interestSlider'); if(s) s.style.display = 'none'; }catch(_){ }
     // scroll to app area
     appArea && appArea.scrollIntoView({behavior:'smooth'});
     // if profile not complete, show profile form inside appArea
@@ -92,16 +90,14 @@
 
   function renderProfileForm(uid){
     if(!appArea) return;
-    // İlgi alanlarını global kaynaktan al (script.js -> window.APP_INTERESTS)
-    // Bulunamazsa küçük bir yedek liste kullan
-    const interests = (window.APP_INTERESTS && Array.isArray(window.APP_INTERESTS) && window.APP_INTERESTS.length)
-      ? window.APP_INTERESTS
-      : [
-          {id:'baglama', label:'Bağlama', img: 'https://source.unsplash.com/600x400/?saz,baglama,music'},
-          {id:'ney', label:'Ney', img: 'https://source.unsplash.com/600x400/?ney,flute,music'},
-          {id:'resim', label:'Resim', img: 'https://source.unsplash.com/600x400/?painting,art,canvas'},
-          {id:'halk', label:'Halk Oyunları', img: 'https://source.unsplash.com/600x400/?folk,dance,traditional'}
-        ];
+    // interest options using realistic photos from Unsplash (requires internet)
+    // These are dynamic queries that return a relevant photo; feel free to replace with your own hosted images.
+    const interests = [
+      {id:'baglama', label:'Bağlama', img: 'https://source.unsplash.com/600x400/?saz,baglama,music'},
+      {id:'ney', label:'Ney', img: 'https://source.unsplash.com/600x400/?ney,flute,music'},
+      {id:'resim', label:'Resim', img: 'https://source.unsplash.com/600x400/?painting,art,canvas'},
+      {id:'halk', label:'Halk Oyunları', img: 'https://source.unsplash.com/600x400/?folk,dance,traditional'}
+    ];
 
     appArea.innerHTML = `
       <div class="profile-form">
@@ -150,7 +146,6 @@
   function hideAppArea(){
     if(appArea) appArea.style.display = 'none';
     if(heroSection) heroSection.style.display = '';
-    try{ const s = document.getElementById('interestSlider'); if(s) s.style.display = ''; }catch(_){ }
   }
 
   function renderSignedOut(){
