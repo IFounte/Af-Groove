@@ -29,7 +29,7 @@
               firstInitHandled = true;
               try{
                 if(isProfileComplete(user.uid)){
-                  showAppArea();
+                  showAppArea({scroll:false});
                 } else {
                   // ensure hero is visible so they can click Start
                   if(heroSection) heroSection.style.display = '';
@@ -67,11 +67,13 @@
   // expose helper for later use
   window.markProfileComplete = function(){ if(auth && auth.currentUser) setProfileComplete(auth.currentUser.uid, true); };
 
-  function showAppArea(){
+  function showAppArea(opts){
+    // opts: { scroll: boolean } - default: false to avoid unexpected scrolling on page load
+    const doScroll = opts && typeof opts.scroll !== 'undefined' ? !!opts.scroll : false;
     if(heroSection) heroSection.style.display = 'none';
     if(appArea) appArea.style.display = 'block';
-    // scroll to app area
-    appArea && appArea.scrollIntoView({behavior:'smooth'});
+    // scroll to app area only when explicitly requested (e.g. user-initiated actions)
+    if(doScroll) appArea && appArea.scrollIntoView({behavior:'smooth'});
     // if profile not complete, show profile form inside appArea
     try{
       const user = auth && auth.currentUser;
@@ -521,8 +523,8 @@
         // hide app area until they click Start
         if(appArea) appArea.style.display = 'none';
       } else {
-        // profile complete -> send to app area
-        showAppArea();
+        // profile complete -> send to app area (don't auto-scroll during background auth init)
+        showAppArea({scroll:false});
       }
     }catch(e){}
   }
@@ -582,10 +584,10 @@
         if(user){
           // If this was a fresh signup, immediately send them to the app area (survey)
           if(mode === 'signup'){
-            modal.remove(); showAppArea();
+            modal.remove(); showAppArea({scroll:true});
           } else {
             if(isProfileComplete(user.uid)){
-              modal.remove(); showAppArea();
+              modal.remove(); showAppArea({scroll:true});
             } else {
               modal.remove();
               // show hero so user can click Start and fill initial info
@@ -685,7 +687,7 @@
     // If user is already signed in, go to the app area (which will render profile form if needed).
     if(firebaseInitialized && auth){
       if(auth.currentUser){
-        showAppArea();
+        showAppArea({scroll:true});
       } else {
         // Sometimes auth.currentUser is not immediately available right after createUserWithEmailAndPassword.
         // Retry briefly (up to ~2s) before falling back to opening the signup modal.
@@ -694,7 +696,7 @@
         const tryShow = () => {
           attempts++;
           if(auth.currentUser){
-            showAppArea();
+            showAppArea({scroll:true});
           } else if(attempts < maxAttempts){
             setTimeout(tryShow, 100);
           } else {
