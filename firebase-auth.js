@@ -142,11 +142,6 @@
         <h2>İlgi Alanlarınız</h2>
         <div class="cards-row" id="cardsRow"></div>
       </section>
-
-      <section style="padding:18px">
-        <h2>Af-Groove Ana Sayfa</h2>
-        <p>Seçtiğiniz ilgi alanlarına göre kişiselleştirilmiş içerikler gösterilecektir.</p>
-      </section>
     `;
 
     // Slider uses allSlides as content (show all interest areas)
