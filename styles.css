@@ -41,7 +41,7 @@ body{
 }
 
 header.top{
-  position:sticky;top:0;z-index:40;
+  position:sticky;top:0;z-index:60;
   backdrop-filter: blur(6px);
   background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
   /* subtle drop shadow under the navbar to separate it from content below */
@@ -52,6 +52,8 @@ header.top{
   max-width:1100px;margin:0 auto;padding:0 24px;gap:16px;
   /* make header inner adopt the defined nav height so logo can fill it */
   height:var(--nav-height);
+  /* prevent children from overflowing the header */
+  overflow:hidden;
 }
 
 /* Header auth buttons group */
@@ -77,7 +79,8 @@ header.top{
 .auth-card #googleWrap{justify-content:center}
 .auth-card .btn.google-icon{margin:0 auto}
 .brand{display:flex;align-items:center;gap:12px}
-.brand img{height:100%;width:auto;display:block}
+.brand img{display:none}
+.brand-logo{height:calc(var(--nav-height) - 18px);max-height:100%;width:auto;display:block}
 .brand .title{font-weight:800;letter-spacing:1px;font-size:18px}
 .pencil{filter:drop-shadow(0 4px 10px rgba(11,18,32,0.18));}
 
