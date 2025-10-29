@@ -80,7 +80,7 @@ header.top{
 .auth-card .btn.google-icon{margin:0 auto}
 .brand{display:flex;align-items:center;gap:12px}
 .brand img:not(.brand-logo){display:none}
-.brand-logo{height:calc(var(--nav-height) - 18px);max-height:100%;width:auto;display:block}
+.brand-logo{height:calc(var(--nav-height) - 6px);max-height:100%;width:auto;display:block}
 .brand .title{font-weight:800;letter-spacing:1px;font-size:18px}
 .pencil{filter:drop-shadow(0 4px 10px rgba(11,18,32,0.18));}
 
