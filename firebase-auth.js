@@ -113,26 +113,65 @@
       }
     }catch(e){ console.warn('Error reading profile for slider filter', e); }
 
+    // Determine picked slides (user's interests) and slider content (all slides)
+    let pickedSlides = [];
+    try{
+      const user = auth && auth.currentUser;
+      if(user){
+        const raw = localStorage.getItem(`ag_profile_${user.uid}`);
+        if(raw){
+          const profile = JSON.parse(raw);
+          if(profile && Array.isArray(profile.interests) && profile.interests.length>0){
+            const pickedIds = profile.interests.map(id=>id.toString());
+            pickedSlides = allSlides.filter(s => pickedIds.includes(s.id));
+          }
+        }
+      }
+    }catch(e){ console.warn('Error reading profile for picked slides', e); }
+
     appArea.innerHTML = `
-      <div class="slider" id="mainSlider">
-        <div class="slides" id="slides"></div>
+      <div style="padding:8px 12px">
+        <h2>Yeni İlgi Alanları</h2>
+        <div class="slider" id="mainSlider">
+          <div class="slides" id="slides"></div>
+        </div>
+        <div class="dots" id="sliderDots"></div>
       </div>
-      <div class="dots" id="sliderDots"></div>
+
+      <section style="padding:14px 18px">
+        <h2>İlgi Alanlarınız</h2>
+        <div class="cards-row" id="cardsRow"></div>
+      </section>
+
       <section style="padding:18px">
         <h2>Af-Groove Ana Sayfa</h2>
         <p>Seçtiğiniz ilgi alanlarına göre kişiselleştirilmiş içerikler gösterilecektir.</p>
       </section>
     `;
 
+    // Slider uses allSlides as content (show all interest areas)
     const slidesEl = document.getElementById('slides');
     const dotsEl = document.getElementById('sliderDots');
-    slides.forEach((s, idx)=>{
+    allSlides.forEach((s, idx)=>{
       const slide = document.createElement('div'); slide.className='slide';
       slide.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="slide-caption"><h3>${s.title}</h3><p>${s.desc}</p></div>`;
       slidesEl.appendChild(slide);
       const dot = document.createElement('div'); dot.className='dot'; dot.dataset.idx = idx; dotsEl.appendChild(dot);
       dot.addEventListener('click', ()=>{ goToSlide(idx); resetAuto(); });
     });
+
+    // Render picked cards (compact) BELOW the slider
+    const cardsRow = document.getElementById('cardsRow');
+    if(pickedSlides.length === 0){
+      cardsRow.innerHTML = `<div style="padding:12px;color:var(--muted)">Henüz ilgi alanı seçmediniz. Hemen <button class="btn primary" id="openProfile">Anketi Doldur</button> ile başlayabilirsiniz.</div>`;
+      const btn = document.getElementById('openProfile'); if(btn) btn.addEventListener('click', ()=>{ if(auth && auth.currentUser) renderProfileForm(auth.currentUser.uid); else openAuthModal('signup'); });
+    } else {
+      pickedSlides.forEach(s=>{
+        const c = document.createElement('div'); c.className='mini-card';
+        c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
+        cardsRow.appendChild(c);
+      });
+    }
 
     let current = 0;
     const total = slides.length;
