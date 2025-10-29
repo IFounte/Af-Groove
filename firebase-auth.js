@@ -91,7 +91,9 @@
       {id:'baglama', title:'Bağlama Eğitimi', img: encodeURI('assets/Bağlama_yatay.png'), desc:'Bağlama çalmayı öğrenin: akorlar, ritimler ve repertuar.'},
       {id:'ney', title:'Ney ve Üflemeli Çalgılar', img: encodeURI('assets/Ney_yatay.png'), desc:'Ney teknikleri ve nefes çalışmaları ile müzikal yolculuğunuzu başlatın.'},
       {id:'gorsel', title:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png'), desc:'Görsel sanatlar: resim, kompozisyon ve farklı tekniklerle yaratıcılığınızı keşfedin.'},
-      {id:'halk', title:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png'), desc:'Yerel dans stilleri ve koreografilerle kültürel mirası yaşayın.'}
+      {id:'halk', title:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png'), desc:'Yerel dans stilleri ve koreografilerle kültürel mirası yaşayın.'},
+  {id:'ut', title:'Ut Eğitimi', img: encodeURI('assets/Ut.png'), desc:'Ut öğrenin: temel teknikler, makamlar ve icra pratikleri.'},
+  {id:'halkhikaye', title:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png'), desc:'Halk hikayeleri ve anonim kültürel anlatılarla geçmişe yolculuk.'}
     ];
 
     // Build slides list by prioritizing user's selected interests first, then the rest
@@ -163,13 +165,32 @@
 
     // Build slider order: shuffle allSlides so slider order differs from other lists
     const sliderSlides = shuffled(allSlides);
-    sliderSlides.forEach((s, idx)=>{
-      const slide = document.createElement('div'); slide.className='slide';
+
+    // helper to create slide element
+    function makeSlideElement(s){
+      const slide = document.createElement('div'); slide.className = 'slide';
       slide.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="slide-caption"><h3>${s.title}</h3><p>${s.desc}</p></div>`;
-      slidesEl.appendChild(slide);
-      const dot = document.createElement('div'); dot.className='dot'; dot.dataset.idx = idx; dotsEl.appendChild(dot);
-      dot.addEventListener('click', ()=>{ goToSlide(idx); resetAuto(); });
-    });
+      return slide;
+    }
+
+    // Build augmented slider for seamless infinite loop: [cloneLast, ...origins, cloneFirst]
+    slidesEl.innerHTML = '';
+    const origCount = sliderSlides.length;
+    if(origCount > 0){
+      // prepend clone of last
+      const cloneLast = makeSlideElement(sliderSlides[origCount-1]); cloneLast.classList.add('clone'); slidesEl.appendChild(cloneLast);
+      // originals
+      sliderSlides.forEach(s=> slidesEl.appendChild(makeSlideElement(s)));
+      // append clone of first
+      const cloneFirst = makeSlideElement(sliderSlides[0]); cloneFirst.classList.add('clone'); slidesEl.appendChild(cloneFirst);
+    }
+
+    // build dots for originals only
+    dotsEl.innerHTML = '';
+    for(let i=0;i<origCount;i++){
+      const dot = document.createElement('div'); dot.className='dot'; dot.dataset.idx = i; dotsEl.appendChild(dot);
+      dot.addEventListener('click', ()=>{ goToSlide(i); resetAuto(); });
+    }
 
   // Render picked cards (compact) BELOW the slider
   const cardsRow = document.getElementById('cardsRow');
@@ -228,16 +249,23 @@
       }
     }catch(e){console.warn('Could not populate allInterestsRow', e);} 
 
-    let current = 0;
-    const total = sliderSlides.length;
+    // setup augmented slider state
+    let current = 1; // start at first real slide (index 1 in augmented list)
+    const originals = sliderSlides.length; // N
+
     const update = ()=>{
       slidesEl.style.transform = `translateX(-${current*100}%)`;
-      Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i===current));
+      // active dot corresponds to current-1 (wrap)
+      Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i === ((current-1+originals)%originals)));
       // reset any parallax transforms
       Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
     };
-    function goToSlide(i){ current = (i+total)%total; update(); }
-    function next(){ current = (current+1)%total; update(); }
+
+    function setCurrentAug(c){ current = c; update(); }
+    function goToSlide(i){ // i is original index 0..N-1
+      setCurrentAug(i+1);
+    }
+    function next(){ setCurrentAug(current+1); }
 
     // Auto-advance every 10s
     let auto = setInterval(next, 10000);
@@ -250,6 +278,27 @@
     const onMouseLeave = ()=> { resetAuto(); };
     slider.addEventListener('mouseenter', onMouseEnter);
     slider.addEventListener('mouseleave', onMouseLeave);
+
+    // transitionend: handle seamless jump when hitting clones
+    slidesEl.addEventListener('transitionend', ()=>{
+      // if we've moved to clone-first (index originals+1), jump to 1
+      if(current === originals + 1){
+        slidesEl.style.transition = 'none';
+        current = 1;
+        slidesEl.style.transform = `translateX(-${current*100}%)`;
+        // force reflow then restore transition
+        void slidesEl.offsetWidth;
+        slidesEl.style.transition = '';
+      }
+      // if we've moved to clone-last (index 0), jump to originals
+      if(current === 0){
+        slidesEl.style.transition = 'none';
+        current = originals;
+        slidesEl.style.transform = `translateX(-${current*100}%)`;
+        void slidesEl.offsetWidth;
+        slidesEl.style.transition = '';
+      }
+    });
 
     // Improved drag/swipe support with live dragging, parallax, and 10% threshold
     let isDragging = false;
@@ -288,9 +337,9 @@
       const dx = e.clientX - startX;
       const movedRatio = Math.abs(dx) / slideWidth();
       if(movedRatio >= thresholdRatio){
-        if(dx < 0) goToSlide(current+1); else goToSlide(current-1);
+        if(dx < 0) setCurrentAug(current+1); else setCurrentAug(current-1);
       } else {
-        goToSlide(current);
+        setCurrentAug(current);
       }
       Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
       try{ slidesEl.releasePointerCapture(e.pointerId); }catch(_){/* ignore */}
@@ -301,7 +350,7 @@
       isDragging = false;
       slider.classList.remove('dragging');
       slidesEl.style.transition = '';
-      goToSlide(current);
+      setCurrentAug(current);
       Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
       resetAuto();
     };
