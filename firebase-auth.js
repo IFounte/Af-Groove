@@ -85,13 +85,33 @@
 
   function renderMainForUser(){
     if(!appArea) return;
-    // Slider slides based on our interest areas
-    const slides = [
+
+    // Define all possible slides
+    const allSlides = [
       {id:'baglama', title:'Bağlama Eğitimi', img: encodeURI('assets/Bağlama_yatay.png'), desc:'Bağlama çalmayı öğrenin: akorlar, ritimler ve repertuar.'},
       {id:'ney', title:'Ney ve Üflemeli Çalgılar', img: encodeURI('assets/Ney_yatay.png'), desc:'Ney teknikleri ve nefes çalışmaları ile müzikal yolculuğunuzu başlatın.'},
-      {id:'gorsel', title:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png'), desc:'Resim, kompozisyon ve farklı tekniklerle yaratıcılığınızı keşfedin.'},
+      {id:'gorsel', title:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png'), desc:'Görsel sanatlar: resim, kompozisyon ve farklı tekniklerle yaratıcılığınızı keşfedin.'},
       {id:'halk', title:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png'), desc:'Yerel dans stilleri ve koreografilerle kültürel mirası yaşayın.'}
     ];
+
+    // Build slides list by prioritizing user's selected interests first, then the rest
+    let slides = allSlides;
+    try{
+      const user = auth && auth.currentUser;
+      if(user){
+        const raw = localStorage.getItem(`ag_profile_${user.uid}`);
+        if(raw){
+          const profile = JSON.parse(raw);
+          if(profile && Array.isArray(profile.interests) && profile.interests.length>0){
+            const picked = profile.interests.map(id=>id.toString());
+            // keep order: first the picked ones in the order they appear in allSlides, then the remaining slides
+            const pickedSlides = allSlides.filter(s => picked.includes(s.id));
+            const otherSlides = allSlides.filter(s => !picked.includes(s.id));
+            slides = pickedSlides.concat(otherSlides);
+          }
+        }
+      }
+    }catch(e){ console.warn('Error reading profile for slider filter', e); }
 
     appArea.innerHTML = `
       <div class="slider" id="mainSlider">
@@ -119,6 +139,8 @@
     const update = ()=>{
       slidesEl.style.transform = `translateX(-${current*100}%)`;
       Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i===current));
+      // reset any parallax transforms
+      Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
     };
     function goToSlide(i){ current = (i+total)%total; update(); }
     function next(){ current = (current+1)%total; update(); }
@@ -132,12 +154,64 @@
     slider.addEventListener('mouseenter', ()=> clearInterval(auto));
     slider.addEventListener('mouseleave', ()=> { resetAuto(); });
 
-    // Drag/Swipe support
-    let startX = 0; let isDown = false; let moved = false;
-    slidesEl.addEventListener('pointerdown', (e)=>{ isDown=true; startX = e.clientX; slidesEl.setPointerCapture(e.pointerId); });
-    slidesEl.addEventListener('pointermove', (e)=>{ if(!isDown) return; const dx = e.clientX - startX; if(Math.abs(dx) > 40){ moved = true; if(dx > 0) { goToSlide(current-1); startX = e.clientX; resetAuto(); } else { goToSlide(current+1); startX = e.clientX; resetAuto(); } } });
-    slidesEl.addEventListener('pointerup', (e)=>{ isDown=false; moved=false; });
-    slidesEl.addEventListener('pointercancel', ()=>{ isDown=false; moved=false; });
+    // Improved drag/swipe support with live dragging, parallax, and 10% threshold
+    let isDragging = false;
+    let startX = 0;
+    let prevTranslate = 0;
+    function pxTranslate(x){ slidesEl.style.transform = `translateX(${x}px)`; }
+    function slideWidth(){ return slider.clientWidth; }
+    const thresholdRatio = 0.10; // 10%
+
+    slidesEl.addEventListener('pointerdown', (e)=>{
+      isDragging = true;
+      slider.classList.add('dragging');
+      startX = e.clientX;
+      prevTranslate = -current * slideWidth();
+      slidesEl.style.transition = 'none';
+      try{ slidesEl.setPointerCapture(e.pointerId); }catch(_){/* ignore */}
+    });
+
+    slidesEl.addEventListener('pointermove', (e)=>{
+      if(!isDragging) return;
+      const dx = e.clientX - startX;
+      // move slides
+      pxTranslate(prevTranslate + dx);
+      // parallax: move images slightly relative to drag
+      const imgs = slidesEl.querySelectorAll('img');
+      imgs.forEach((img, idx)=>{
+        // stronger parallax for current slide, weaker for others
+        const factor = (idx === current) ? 0.25 : 0.12;
+        img.style.transform = `translateX(${dx * factor}px)`;
+      });
+    });
+
+    slidesEl.addEventListener('pointerup', (e)=>{
+      if(!isDragging) return;
+      isDragging = false;
+      slider.classList.remove('dragging');
+      slidesEl.style.transition = '';
+      const dx = e.clientX - startX;
+      const movedRatio = Math.abs(dx) / slideWidth();
+      if(movedRatio >= thresholdRatio){
+        if(dx < 0) goToSlide(current+1); else goToSlide(current-1);
+      } else {
+        goToSlide(current);
+      }
+      // reset image parallax transforms
+      Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
+      try{ slidesEl.releasePointerCapture(e.pointerId); }catch(_){/* ignore */}
+      resetAuto();
+    });
+
+    slidesEl.addEventListener('pointercancel', ()=>{
+      if(!isDragging) return;
+      isDragging = false;
+      slider.classList.remove('dragging');
+      slidesEl.style.transition = '';
+      goToSlide(current);
+      Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
+      resetAuto();
+    });
 
     // initial state
     update();
@@ -312,7 +386,16 @@
     `;
     document.body.appendChild(modal);
     modal.querySelector('.close').addEventListener('click', ()=>modal.remove());
-  modal.querySelector('#authSubmit').addEventListener('click', async ()=>{
+    // Allow Enter key to submit the modal form when typing in inputs
+    modal.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        const submit = modal.querySelector('#authSubmit');
+        if(submit) submit.click();
+      }
+    });
+
+    modal.querySelector('#authSubmit').addEventListener('click', async ()=>{
       const email = modal.querySelector('#authEmail').value.trim();
       const pass = modal.querySelector('#authPass').value;
       const errEl = modal.querySelector('.auth-error');

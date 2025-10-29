@@ -112,7 +112,7 @@ footer{padding:18px;text-align:center;color:var(--muted)}
 .slider{position:relative;overflow:hidden;border-radius:12px;margin:0;border-bottom:1px solid rgba(255,255,255,0.03);}
 .slides{display:flex;transition:transform 400ms ease;will-change:transform}
 .slide{min-width:100%;display:flex;align-items:center;gap:20px;padding:18px}
-.slide img{width:45%;height:220px;object-fit:cover;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12)}
+.slide img{width:45%;height:220px;object-fit:cover;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);pointer-events:none;-webkit-user-drag:none}
 .slide-caption{width:55%}
 .slide-caption h3{margin:0 0 8px 0;font-size:20px}
 .slide-caption p{margin:0;color:var(--muted)}
@@ -125,6 +125,12 @@ footer{padding:18px;text-align:center;color:var(--muted)}
   .slide img{width:100%;height:180px}
   .slide-caption{width:100%}
 }
+
+/* Prevent text selection while interacting with slider and improve drag cursor */
+.slider, .slides, .slide-caption { user-select: none; -webkit-user-select: none; -ms-user-select: none; }
+.slides { touch-action: pan-y; }
+.slider.dragging .slide { cursor: grabbing; }
+.slider .slide { cursor: grab; }
 
 /* Profile form */
 .profile-form{max-width:560px;margin:18px auto;display:flex;flex-direction:column;gap:12px;padding:18px}
