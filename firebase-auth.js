@@ -143,7 +143,7 @@
 
       <section style="padding:14px 18px">
         <h2>Yeni İlgi Alanları</h2>
-        <div class="cards-row" id="allInterestsRow"></div>
+        <div class="all-interests-grid" id="allInterestsRow"></div>
       </section>
     `;
 
@@ -303,10 +303,65 @@
       try{ slider.removeEventListener('mouseenter', onMouseEnter); slider.removeEventListener('mouseleave', onMouseLeave); }catch(_){ }
       try{ slidesEl.removeEventListener('pointerdown', onPointerDown); slidesEl.removeEventListener('pointermove', onPointerMove); slidesEl.removeEventListener('pointerup', onPointerUp); slidesEl.removeEventListener('pointercancel', onPointerCancel); }catch(_){ }
       try{ Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)'); }catch(_){ }
+      // unpin slider if pinned
+      try{ if(typeof window.__ag_unpin_slider === 'function') { window.__ag_unpin_slider(); delete window.__ag_unpin_slider; } }catch(_){ }
     };
 
     // initial state
     update();
+    // Pin the slider to the top of the page (fixed under header) and keep a placeholder to preserve layout
+    (function(){
+      const headerEl = document.querySelector('header.top');
+      const sliderEl = document.getElementById('mainSlider');
+      if(!sliderEl) return;
+      let sliderPinned = false;
+      let sliderPlaceholder = null;
+      let sliderResizeHandler = null;
+
+      function pinSlider(){
+        if(sliderPinned) return;
+        const appRect = appArea.getBoundingClientRect();
+        const rect = sliderEl.getBoundingClientRect();
+        // create placeholder
+        sliderPlaceholder = document.createElement('div');
+        sliderPlaceholder.className = 'slider-placeholder';
+        sliderPlaceholder.style.height = rect.height + 'px';
+        sliderEl.parentNode.insertBefore(sliderPlaceholder, sliderEl);
+        // compute top offset (below header)
+        const headerH = headerEl ? headerEl.offsetHeight : 0;
+        // apply fixed positioning to slider
+        sliderEl.style.position = 'fixed';
+        sliderEl.style.top = headerH + 'px';
+        sliderEl.style.left = appRect.left + 'px';
+        sliderEl.style.width = appRect.width + 'px';
+        sliderEl.style.zIndex = 999;
+        sliderPinned = true;
+
+        sliderResizeHandler = function(){
+          const appR = appArea.getBoundingClientRect();
+          sliderEl.style.left = appR.left + 'px';
+          sliderEl.style.width = appR.width + 'px';
+          // update placeholder height in case slider height changed
+          try{ sliderPlaceholder.style.height = sliderEl.getBoundingClientRect().height + 'px'; }catch(_){ }
+        };
+        window.addEventListener('resize', sliderResizeHandler);
+      }
+
+      function unpinSlider(){
+        if(!sliderPinned) return;
+        // restore
+        try{ sliderEl.style.position = ''; sliderEl.style.top = ''; sliderEl.style.left = ''; sliderEl.style.width = ''; sliderEl.style.zIndex = ''; }catch(_){ }
+        try{ if(sliderPlaceholder && sliderPlaceholder.parentNode) sliderPlaceholder.parentNode.removeChild(sliderPlaceholder); }catch(_){ }
+        sliderPlaceholder = null; sliderPinned = false;
+        if(sliderResizeHandler) { window.removeEventListener('resize', sliderResizeHandler); sliderResizeHandler = null; }
+      }
+
+      // Expose unpin function for global cleanup
+      window.__ag_unpin_slider = unpinSlider;
+
+      // Pin now
+      try{ pinSlider(); }catch(e){ console.warn('pinSlider failed', e); }
+    })();
   }
 
   function renderProfileForm(uid){
@@ -566,8 +621,8 @@
       const allRow = document.getElementById('allInterestsRow');
       if(allRow){
         allSlides.forEach(s=>{
-          const c = document.createElement('div'); c.className='mini-card';
-          c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
+          const c = document.createElement('div'); c.className='interest-card'; c.setAttribute('data-id', s.id);
+          c.innerHTML = `<div class="thumb"><img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/></div><div class="label">${s.title}</div><div class="desc">${s.desc}</div>`;
           allRow.appendChild(c);
         });
       }
