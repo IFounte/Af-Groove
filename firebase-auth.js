@@ -152,7 +152,20 @@
     // Slider uses allSlides as content (show all interest areas)
     const slidesEl = document.getElementById('slides');
     const dotsEl = document.getElementById('sliderDots');
-    allSlides.forEach((s, idx)=>{
+
+    // Helper: simple Fisher-Yates shuffle (non-destructive)
+    function shuffled(arr){
+      const a = arr.slice();
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // Build slider order: shuffle allSlides so slider order differs from other lists
+    const sliderSlides = shuffled(allSlides);
+    sliderSlides.forEach((s, idx)=>{
       const slide = document.createElement('div'); slide.className='slide';
       slide.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="slide-caption"><h3>${s.title}</h3><p>${s.desc}</p></div>`;
       slidesEl.appendChild(slide);
@@ -163,18 +176,48 @@
     // Render picked cards (compact) BELOW the slider
     const cardsRow = document.getElementById('cardsRow');
     if(pickedSlides.length === 0){
-      cardsRow.innerHTML = `<div style="padding:12px;color:var(--muted)">Henüz ilgi alanı seçmediniz. Hemen <button class="btn primary" id="openProfile">Anketi Doldur</button> ile başlayabilirsiniz.</div>`;
-      const btn = document.getElementById('openProfile'); if(btn) btn.addEventListener('click', ()=>{ if(auth && auth.currentUser) renderProfileForm(auth.currentUser.uid); else openAuthModal('signup'); });
-    } else {
-      pickedSlides.forEach(s=>{
+      // No picks: show all slides in a different deterministic order (rotate by 1)
+      const rotated = allSlides.slice(1).concat(allSlides.slice(0,1));
+      rotated.forEach(s=>{
         const c = document.createElement('div'); c.className='mini-card';
         c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
         cardsRow.appendChild(c);
       });
+      const prompt = document.createElement('div'); prompt.style.padding = '12px'; prompt.style.color = 'var(--muted)'; prompt.innerHTML = `Henüz ilgi alanı seçmediniz. `;
+      const btn = document.createElement('button'); btn.className = 'btn primary'; btn.id = 'openProfile'; btn.textContent = 'Anketi Doldur';
+      prompt.appendChild(btn);
+      cardsRow.appendChild(prompt);
+      btn.addEventListener('click', ()=>{ if(auth && auth.currentUser) renderProfileForm(auth.currentUser.uid); else openAuthModal('signup'); });
+    } else {
+      // Respect user's selection order (profile.interests order)
+      try{
+        const user = auth && auth.currentUser;
+        const raw = user ? localStorage.getItem(`ag_profile_${user.uid}`) : null;
+        let profileOrder = null;
+        if(raw){ const profile = JSON.parse(raw); if(profile && Array.isArray(profile.interests)) profileOrder = profile.interests.map(String); }
+        if(profileOrder){
+          profileOrder.forEach(id=>{
+            const s = allSlides.find(x => x.id === id);
+            if(s){ const c = document.createElement('div'); c.className='mini-card'; c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`; cardsRow.appendChild(c); }
+          });
+        } else {
+          pickedSlides.forEach(s=>{
+            const c = document.createElement('div'); c.className='mini-card';
+            c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
+            cardsRow.appendChild(c);
+          });
+        }
+      }catch(e){
+        pickedSlides.forEach(s=>{
+          const c = document.createElement('div'); c.className='mini-card';
+          c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
+          cardsRow.appendChild(c);
+        });
+      }
     }
 
     let current = 0;
-    const total = slides.length;
+    const total = sliderSlides.length;
     const update = ()=>{
       slidesEl.style.transform = `translateX(-${current*100}%)`;
       Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i===current));
@@ -190,8 +233,11 @@
 
     // Pause on hover
     const slider = document.getElementById('mainSlider');
-    slider.addEventListener('mouseenter', ()=> clearInterval(auto));
-    slider.addEventListener('mouseleave', ()=> { resetAuto(); });
+    // Named handlers for cleanup
+    const onMouseEnter = ()=> clearInterval(auto);
+    const onMouseLeave = ()=> { resetAuto(); };
+    slider.addEventListener('mouseenter', onMouseEnter);
+    slider.addEventListener('mouseleave', onMouseLeave);
 
     // Improved drag/swipe support with live dragging, parallax, and 10% threshold
     let isDragging = false;
@@ -201,16 +247,16 @@
     function slideWidth(){ return slider.clientWidth; }
     const thresholdRatio = 0.10; // 10%
 
-    slidesEl.addEventListener('pointerdown', (e)=>{
+    // Pointer handlers (named so they can be removed)
+    const onPointerDown = (e)=>{
       isDragging = true;
       slider.classList.add('dragging');
       startX = e.clientX;
       prevTranslate = -current * slideWidth();
       slidesEl.style.transition = 'none';
       try{ slidesEl.setPointerCapture(e.pointerId); }catch(_){/* ignore */}
-    });
-
-    slidesEl.addEventListener('pointermove', (e)=>{
+    };
+    const onPointerMove = (e)=>{
       if(!isDragging) return;
       const dx = e.clientX - startX;
       // move slides
@@ -218,13 +264,11 @@
       // parallax: move images slightly relative to drag
       const imgs = slidesEl.querySelectorAll('img');
       imgs.forEach((img, idx)=>{
-        // stronger parallax for current slide, weaker for others
         const factor = (idx === current) ? 0.25 : 0.12;
         img.style.transform = `translateX(${dx * factor}px)`;
       });
-    });
-
-    slidesEl.addEventListener('pointerup', (e)=>{
+    };
+    const onPointerUp = (e)=>{
       if(!isDragging) return;
       isDragging = false;
       slider.classList.remove('dragging');
@@ -236,13 +280,11 @@
       } else {
         goToSlide(current);
       }
-      // reset image parallax transforms
       Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
       try{ slidesEl.releasePointerCapture(e.pointerId); }catch(_){/* ignore */}
       resetAuto();
-    });
-
-    slidesEl.addEventListener('pointercancel', ()=>{
+    };
+    const onPointerCancel = ()=>{
       if(!isDragging) return;
       isDragging = false;
       slider.classList.remove('dragging');
@@ -250,7 +292,20 @@
       goToSlide(current);
       Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
       resetAuto();
-    });
+    };
+
+    slidesEl.addEventListener('pointerdown', onPointerDown);
+    slidesEl.addEventListener('pointermove', onPointerMove);
+    slidesEl.addEventListener('pointerup', onPointerUp);
+    slidesEl.addEventListener('pointercancel', onPointerCancel);
+
+    // Expose a cleanup function so signing out can stop intervals and remove listeners
+    window.__ag_cleanup_slider = function(){
+      try{ clearInterval(auto); }catch(_){/* ignore */}
+      try{ slider.removeEventListener('mouseenter', onMouseEnter); slider.removeEventListener('mouseleave', onMouseLeave); }catch(_){ }
+      try{ slidesEl.removeEventListener('pointerdown', onPointerDown); slidesEl.removeEventListener('pointermove', onPointerMove); slidesEl.removeEventListener('pointerup', onPointerUp); slidesEl.removeEventListener('pointercancel', onPointerCancel); }catch(_){ }
+      try{ Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)'); }catch(_){ }
+    };
 
     // initial state
     update();
@@ -318,6 +373,10 @@
   function renderSignedOut(){
     // Keep userArea minimal when signed-out; use header buttons for auth actions.
     userArea.innerHTML = '';
+    // If a slider or other app-area intervals/listeners are active, clean them up
+    try{ if(window.__ag_cleanup_slider) { window.__ag_cleanup_slider(); delete window.__ag_cleanup_slider; } }catch(_){ }
+    // hide/clear app area so signed-out users see the hero (first-time visitor experience)
+    try{ if(appArea){ appArea.style.display = 'none'; appArea.innerHTML = ''; } }catch(_){ }
     // show header auth buttons
     const headerAuth = document.getElementById('headerAuth');
     if(headerAuth) headerAuth.style.display = '';
