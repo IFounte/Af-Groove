@@ -332,7 +332,14 @@
     let startX = 0;
     let prevTranslate = 0;
     function pxTranslate(x){ slidesEl.style.transform = `translateX(${x}px)`; }
-    function slideWidth(){ return slider.clientWidth; }
+    function slideWidth(){
+      // Prefer the actual rendered slide width (accounts for padding/margins)
+      try{
+        const first = slidesEl.querySelector('.slide');
+        if(first && first.clientWidth) return first.clientWidth;
+      }catch(_){ }
+      return slider.clientWidth;
+    }
     const thresholdRatio = 0.10; // 10%
 
     // Pointer handlers (named so they can be removed)
@@ -406,8 +413,23 @@
       try{ Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)'); }catch(_){ }
     };
 
-    // initial state
-    update();
+    // initial state: run after a frame and after the first image paints to ensure correct widths
+    requestAnimationFrame(()=>{
+      update();
+      prevTranslate = -current * slideWidth();
+      // ensure we re-align once the first slide image loads (some browsers change layout after image decode)
+      try{
+        const imgs = slidesEl.querySelectorAll('img');
+        let aligned = false;
+        imgs.forEach(img=>{
+          if(img.complete){ /* already loaded */ aligned = true; }
+          img.addEventListener('load', ()=>{
+            if(!aligned){ aligned = true; update(); prevTranslate = -current * slideWidth(); }
+          });
+        });
+        if(aligned){ update(); prevTranslate = -current * slideWidth(); }
+      }catch(_){ }
+    });
   }
 
   function renderProfileForm(uid){
@@ -417,7 +439,9 @@
       {id:'baglama', label:'Bağlama', img: encodeURI('assets/Bağlama_yatay.png')},
       {id:'ney', label:'Ney', img: encodeURI('assets/Ney_yatay.png')},
       {id:'gorsel', label:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png')},
-      {id:'halk', label:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png')}
+      {id:'halk', label:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png')},
+      {id:'ut', label:'Ut', img: encodeURI('assets/Ut.png')},
+      {id:'halkhikaye', label:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png')}
     ];
 
     appArea.innerHTML = `
