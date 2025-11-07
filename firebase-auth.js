@@ -168,10 +168,31 @@
     // Build slider order: shuffle allSlides so slider order differs from other lists
     const sliderSlides = shuffled(allSlides);
 
+    // Preload the first N important images (above-the-fold) to improve initial paint
+    try{
+      const preloadCount = Math.min(2, sliderSlides.length);
+      for(let i=0;i<preloadCount;i++){
+        const href = sliderSlides[i].img;
+        // avoid duplicate preload tags
+        if(href && !document.querySelector(`link[rel="preload"][href="${href}"]`)){
+          const l = document.createElement('link');
+          l.rel = 'preload'; l.as = 'image'; l.href = href;
+          document.head.appendChild(l);
+        }
+      }
+    }catch(e){/* non-fatal */}
+
     // helper to create slide element
-    function makeSlideElement(s){
+    // makeSlideElement accepts opts.priority to mark high-priority images
+    function makeSlideElement(s, opts){
       const slide = document.createElement('div'); slide.className = 'slide';
-      slide.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="slide-caption"><h3>${s.title}</h3><p>${s.desc}</p></div>`;
+      const eager = opts && opts.priority;
+      const attrs = eager ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"';
+      slide.innerHTML = `<img src="${s.img}" alt="${s.title}" ${attrs} /><div class="slide-caption"><h3>${s.title}</h3><p>${s.desc}</p></div>`;
+      // small JS-level fallback: if image fails to load, add a CSS class so it can be styled (no external fallback required)
+      try{
+        const img = slide.querySelector('img'); if(img){ img.addEventListener('error', ()=>{ img.classList.add('img-error'); }); }
+      }catch(e){}
       return slide;
     }
 
@@ -179,12 +200,13 @@
     slidesEl.innerHTML = '';
     const origCount = sliderSlides.length;
     if(origCount > 0){
-      // prepend clone of last
-      const cloneLast = makeSlideElement(sliderSlides[origCount-1]); cloneLast.classList.add('clone'); slidesEl.appendChild(cloneLast);
-      // originals
-      sliderSlides.forEach(s=> slidesEl.appendChild(makeSlideElement(s)));
-      // append clone of first
-      const cloneFirst = makeSlideElement(sliderSlides[0]); cloneFirst.classList.add('clone'); slidesEl.appendChild(cloneFirst);
+  // prepend clone of last
+  const cloneLast = makeSlideElement(sliderSlides[origCount-1]); cloneLast.classList.add('clone'); slidesEl.appendChild(cloneLast);
+  // originals (mark the first original as high-priority)
+  const _preloadCount = Math.min(2, sliderSlides.length);
+  sliderSlides.forEach((s, idx)=> slidesEl.appendChild(makeSlideElement(s, { priority: idx < _preloadCount })));
+  // append clone of first
+  const cloneFirst = makeSlideElement(sliderSlides[0]); cloneFirst.classList.add('clone'); slidesEl.appendChild(cloneFirst);
     }
 
     // build dots for originals only
@@ -256,7 +278,9 @@
     const originals = sliderSlides.length; // N
 
     const update = ()=>{
-      slidesEl.style.transform = `translateX(-${current*100}%)`;
+      // Use pixel-based transforms (based on slider width) to avoid percent/width mismatch
+      const w = slideWidth();
+      slidesEl.style.transform = `translateX(${ -current * w }px)`;
       // active dot corresponds to current-1 (wrap)
       Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i === ((current-1+originals)%originals)));
       // reset any parallax transforms
@@ -287,7 +311,8 @@
       if(current === originals + 1){
         slidesEl.style.transition = 'none';
         current = 1;
-        slidesEl.style.transform = `translateX(-${current*100}%)`;
+        // jump using pixel transform
+        slidesEl.style.transform = `translateX(${ -current * slideWidth() }px)`;
         // force reflow then restore transition
         void slidesEl.offsetWidth;
         slidesEl.style.transition = '';
@@ -296,7 +321,7 @@
       if(current === 0){
         slidesEl.style.transition = 'none';
         current = originals;
-        slidesEl.style.transform = `translateX(-${current*100}%)`;
+        slidesEl.style.transform = `translateX(${ -current * slideWidth() }px)`;
         void slidesEl.offsetWidth;
         slidesEl.style.transition = '';
       }
@@ -363,10 +388,21 @@
     slidesEl.addEventListener('pointercancel', onPointerCancel);
 
     // Expose a cleanup function so signing out can stop intervals and remove listeners
+    // handle window resize to re-align pixel-based transforms
+    let __ag_resize_timer = null;
+    const onResize = ()=>{
+      if(__ag_resize_timer) clearTimeout(__ag_resize_timer);
+      __ag_resize_timer = setTimeout(()=>{
+        try{ slidesEl.style.transition = 'none'; update(); void slidesEl.offsetWidth; slidesEl.style.transition = ''; prevTranslate = -current * slideWidth(); }catch(_){ }
+      }, 120);
+    };
+    window.addEventListener('resize', onResize);
+
     window.__ag_cleanup_slider = function(){
       try{ clearInterval(auto); }catch(_){/* ignore */}
       try{ slider.removeEventListener('mouseenter', onMouseEnter); slider.removeEventListener('mouseleave', onMouseLeave); }catch(_){ }
       try{ slidesEl.removeEventListener('pointerdown', onPointerDown); slidesEl.removeEventListener('pointermove', onPointerMove); slidesEl.removeEventListener('pointerup', onPointerUp); slidesEl.removeEventListener('pointercancel', onPointerCancel); }catch(_){ }
+      try{ window.removeEventListener('resize', onResize); if(__ag_resize_timer) clearTimeout(__ag_resize_timer); }catch(_){ }
       try{ Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)'); }catch(_){ }
     };
 
