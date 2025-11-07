@@ -98,7 +98,7 @@
   {id:'halkhikaye', title:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png'), desc:'Halk hikayeleri ve anonim kültürel anlatılarla geçmişe yolculuk.'}
     ];
 
-    // Build slides list by prioritizing user's selected interests first, then the rest
+  // Build slides list by prioritizing user's selected interests first, then the rest
     let slides = allSlides;
     try{
       const user = auth && auth.currentUser;
@@ -196,6 +196,21 @@
       return slide;
     }
 
+    // helper to wire interest cards to dedicated pages (Bağlama currently)
+    const wireCardNav = (el, id) => {
+      if(!el || !id) return;
+      try{
+        if(id === 'baglama'){
+          el.style.cursor = 'pointer';
+          el.setAttribute('role','link');
+          el.tabIndex = 0;
+          const go = ()=>{ window.location.href = 'baglama.html'; };
+          el.addEventListener('click', go);
+          el.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+        }
+      }catch(_){ }
+    };
+
     // Build augmented slider for seamless infinite loop: [cloneLast, ...origins, cloneFirst]
     slidesEl.innerHTML = '';
     const origCount = sliderSlides.length;
@@ -221,10 +236,13 @@
     if(pickedSlides.length === 0){
       // No picks: show all slides in a different deterministic order (rotate by 1)
       const rotated = allSlides.slice(1).concat(allSlides.slice(0,1));
-      rotated.forEach(s=>{
+        
+
+        rotated.forEach(s=>{
         const c = document.createElement('div'); c.className='mini-card';
         c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
         cardsRow.appendChild(c);
+        wireCardNav(c, s.id);
       });
       const prompt = document.createElement('div'); prompt.style.padding = '12px'; prompt.style.color = 'var(--muted)'; prompt.innerHTML = `Henüz ilgi alanı seçmediniz. `;
       const btn = document.createElement('button'); btn.className = 'btn primary'; btn.id = 'openProfile'; btn.textContent = 'Anketi Doldur';
@@ -241,13 +259,14 @@
         if(profileOrder){
           profileOrder.forEach(id=>{
             const s = allSlides.find(x => x.id === id);
-            if(s){ const c = document.createElement('div'); c.className='mini-card'; c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`; cardsRow.appendChild(c); }
+            if(s){ const c = document.createElement('div'); c.className='mini-card'; c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`; cardsRow.appendChild(c); wireCardNav(c, s.id); }
           });
         } else {
           pickedSlides.forEach(s=>{
             const c = document.createElement('div'); c.className='mini-card';
             c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
             cardsRow.appendChild(c);
+            wireCardNav(c, s.id);
           });
         }
       }catch(e){
@@ -255,6 +274,7 @@
           const c = document.createElement('div'); c.className='mini-card';
           c.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/><div class="m-title">${s.title}</div><div class="m-desc">${s.desc}</div>`;
           cardsRow.appendChild(c);
+          wireCardNav(c, s.id);
         });
       }
     }
@@ -269,6 +289,8 @@
           const c = document.createElement('div'); c.className='interest-card'; c.setAttribute('data-id', s.id);
           c.innerHTML = `<div class="thumb"><img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/></div><div class="label">${s.title}</div><div class="desc">${s.desc}</div>`;
           allRow.appendChild(c);
+          // if this is the Bağlama card, make it navigate to its dedicated page
+          try{ if(typeof wireCardNav === 'function') wireCardNav(c, s.id); }catch(_){ }
         });
       }
     }catch(e){console.warn('Could not populate allInterestsRow', e);} 
@@ -657,9 +679,14 @@
           }
         } else modal.remove();
       }catch(e){
-        // Translate common Firebase errors to Turkish
+        // Translate common Firebase errors to Turkish, but do not expose backend details for wrong credentials
         const code = e && e.code ? e.code : null;
-        errEl.textContent = translateAuthError(code, e && e.message ? e.message : 'Giriş sırasında hata oluştu.');
+        const genericAuthBad = new Set(['auth/wrong-password','auth/user-not-found','auth/invalid-email']);
+        if(mode === 'signin' && genericAuthBad.has(code)){
+          errEl.textContent = 'Yanlış e-posta veya şifre girdiniz.';
+        } else {
+          errEl.textContent = translateAuthError(code, e && e.message ? e.message : 'Giriş sırasında hata oluştu.');
+        }
       }
     });
 
