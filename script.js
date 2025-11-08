@@ -5,23 +5,40 @@
   if(stored) document.documentElement.setAttribute('data-theme', stored);
 
   const btn = document.getElementById('themeToggle');
-  btn.addEventListener('click', ()=>{
-    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', current);
-    localStorage.setItem('theme', current);
-  });
+  if(btn){
+    // initialize aria state
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    btn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
+    // reflect initial visual state on the button
+    btn.classList.toggle('is-light', isLight);
+    // toggle handler respects prefers-reduced-motion
+    btn.addEventListener('click', ()=>{
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', current);
+      localStorage.setItem('theme', current);
+      btn.setAttribute('aria-pressed', current === 'light' ? 'true' : 'false');
+      btn.classList.toggle('is-light', current === 'light');
+      if(!reduce){
+        // small tactile animation (scale) handled by CSS :active; briefly add a class to emphasize toggle
+        btn.classList.add('toggled');
+        setTimeout(()=>btn.classList.remove('toggled'), 240);
+      }
+    });
+  }
 })();
 
 // Typed animation cycling through multiple languages
 (() => {
   const el = document.getElementById('typed');
+  if(!el) return;
   const phrases = [
     {lang:'tr', text: "Af-Groove'a hoş geldiniz."},
     {lang:'en', text: "Welcome to Af-Groove."},
     {lang:'de', text: "Willkommen bei Af-Groove."},
     {lang:'es', text: "Bienvenido a Af-Groove."},
     {lang:'fr', text: "Bienvenue chez Af-Groove."},
-    {lang:'ar', text: "مرحبا بكم في Af-Groove."}
+    {lang:'it', text: "Benvenuto ad Af-Groove."}
   ];
 
   let idx = 0;

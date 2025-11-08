@@ -8,6 +8,26 @@
   let firebaseInitialized = false;
   let firstInitHandled = false;
 
+  function isOnHomePage(){
+    try{
+      const path = (location && location.pathname ? location.pathname : '').toLowerCase();
+      return path.endsWith('/anasayfa.html') || path.endsWith('anasayfa.html');
+    }catch(_){ return false; }
+  }
+
+  function allowHomeRedirect(){
+    try{ return !(typeof window !== 'undefined' && window.AG_DISABLE_HOME_REDIRECT); }
+    catch(_){ return true; }
+  }
+
+  function navigateToHome(){
+    if(allowHomeRedirect()){
+      window.location.href = 'anasayfa.html';
+      return true;
+    }
+    return false;
+  }
+
   function ensureAuthInitialized(){
     const hasFirebase = (typeof firebase !== 'undefined');
     const hasConfig = (typeof firebaseConfig !== 'undefined');
@@ -24,18 +44,29 @@
         auth.onAuthStateChanged(user=>{
           if(user) {
             renderSignedIn(user);
-            // on first init, auto-show app area only for users who already completed profile
-            if(!firstInitHandled){
-              firstInitHandled = true;
-              try{
-                if(isProfileComplete(user.uid)){
-                  showAppArea({scroll:false});
-                } else {
-                  // ensure hero is visible so they can click Start
-                  if(heroSection) heroSection.style.display = '';
+                // on first init, if profile complete send user to the dedicated homepage
+                if(!firstInitHandled){
+                  firstInitHandled = true;
+                  try{
+                            if(isProfileComplete(user.uid)){
+                              // if we're already on the homepage, render in-place; otherwise navigate there (unless disabled)
+                              if(isOnHomePage()){
+                                showAppArea({scroll:false});
+                              } else {
+                                navigateToHome();
+                              }
+                    } else {
+                      // Profile NOT complete - stay on index.html and show the survey
+                      if(isOnHomePage()){
+                        // if somehow on anasayfa.html without profile, go back to index
+                        window.location.href = 'index.html';
+                      } else {
+                        // we're on index.html - show the profile form
+                        showAppArea({scroll:true});
+                      }
+                    }
+                  }catch(e){ if(heroSection) heroSection.style.display = ''; }
                 }
-              }catch(e){ if(heroSection) heroSection.style.display = ''; }
-            }
           } else {
             renderSignedOut();
           }
@@ -87,6 +118,14 @@
 
   function renderMainForUser(){
     if(!appArea) return;
+
+    // If a previous slider instance exists, tear it down before rebuilding to avoid dangling timers/listeners.
+    try{
+      if(window.__ag_cleanup_slider){
+        window.__ag_cleanup_slider();
+        delete window.__ag_cleanup_slider;
+      }
+    }catch(_){ }
 
     // Define all possible slides
     const allSlides = [
@@ -196,15 +235,24 @@
       return slide;
     }
 
-    // helper to wire interest cards to dedicated pages (Bağlama currently)
+    // helper to wire interest cards to dedicated pages
     const wireCardNav = (el, id) => {
       if(!el || !id) return;
       try{
-        if(id === 'baglama'){
+        const pageMap = {
+          baglama: 'baglama.html',
+          ney: 'ney.html',
+          gorsel: 'gorsel.html',
+          halk: 'halk.html',
+          ut: 'ut.html',
+          halkhikaye: 'halkhikaye.html'
+        };
+        const page = pageMap[id];
+        if(page){
           el.style.cursor = 'pointer';
           el.setAttribute('role','link');
           el.tabIndex = 0;
-          const go = ()=>{ window.location.href = 'baglama.html'; };
+          const go = ()=>{ window.location.href = page; };
           el.addEventListener('click', go);
           el.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
         }
@@ -295,64 +343,159 @@
       }
     }catch(e){console.warn('Could not populate allInterestsRow', e);} 
 
+    const slider = document.getElementById('mainSlider');
+
     // setup augmented slider state
-    let current = 1; // start at first real slide (index 1 in augmented list)
-    const originals = sliderSlides.length; // N
+    const originals = sliderSlides.length;
+    let current = originals > 0 ? 1 : 0; // start at first real slide (index 1 in augmented list)
+    let isTransitioning = false;
+    let isDragging = false;
+    let pendingUpdateRetry = null;
+    let transitionFailsafe = null;
+    let prevTranslate = 0;
+
+    const clearTransitionFailsafe = ()=>{
+      if(transitionFailsafe){
+        clearTimeout(transitionFailsafe);
+        transitionFailsafe = null;
+      }
+    };
+
+    function clampAugIndex(value){
+      if(value < 0) return 0;
+      const upper = originals + 1;
+      if(value > upper) return upper;
+      return value;
+    }
 
     const update = ()=>{
-      // Use pixel-based transforms (based on slider width) to avoid percent/width mismatch
-      const w = slideWidth();
-      slidesEl.style.transform = `translateX(${ -current * w }px)`;
-      // active dot corresponds to current-1 (wrap)
-      Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i === ((current-1+originals)%originals)));
-      // reset any parallax transforms
+      const width = slideWidth();
+      const validWidth = Number.isFinite(width) && width > 0;
+      if(!validWidth){
+        if(!pendingUpdateRetry){
+          pendingUpdateRetry = setTimeout(()=>{
+            pendingUpdateRetry = null;
+            update();
+          }, 140);
+        }
+        return;
+      }
+      if(pendingUpdateRetry){
+        clearTimeout(pendingUpdateRetry);
+        pendingUpdateRetry = null;
+      }
+      const translate = -current * width;
+      slidesEl.style.transform = `translateX(${translate}px)`;
+      const activeIndex = originals > 0 ? ((current - 1 + originals) % originals) : -1;
+      Array.from(dotsEl.children).forEach((d,i)=> d.classList.toggle('active', i === activeIndex));
       Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
     };
 
-    function setCurrentAug(c){ current = c; update(); }
-    function goToSlide(i){ // i is original index 0..N-1
-      setCurrentAug(i+1);
-    }
-    function next(){ setCurrentAug(current+1); }
-
-    // Auto-advance every 10s
-    let auto = setInterval(next, 10000);
-    function resetAuto(){ clearInterval(auto); auto = setInterval(next, 10000); }
-
-    // Pause on hover
-    const slider = document.getElementById('mainSlider');
-    // Named handlers for cleanup
-    const onMouseEnter = ()=> clearInterval(auto);
-    const onMouseLeave = ()=> { resetAuto(); };
-    slider.addEventListener('mouseenter', onMouseEnter);
-    slider.addEventListener('mouseleave', onMouseLeave);
-
-    // transitionend: handle seamless jump when hitting clones
-    slidesEl.addEventListener('transitionend', ()=>{
-      // if we've moved to clone-first (index originals+1), jump to 1
+    const handleLoopBoundaries = ()=>{
+      if(originals === 0) return;
+      const rawWidth = slideWidth();
+      const width = (Number.isFinite(rawWidth) && rawWidth > 0) ? rawWidth : (slider ? slider.clientWidth : 0);
       if(current === originals + 1){
         slidesEl.style.transition = 'none';
         current = 1;
-        // jump using pixel transform
-        slidesEl.style.transform = `translateX(${ -current * slideWidth() }px)`;
-        // force reflow then restore transition
+        const translate = -current * width;
+        slidesEl.style.transform = `translateX(${translate}px)`;
+        Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
         void slidesEl.offsetWidth;
         slidesEl.style.transition = '';
-      }
-      // if we've moved to clone-last (index 0), jump to originals
-      if(current === 0){
+        update();
+      } else if(current === 0){
         slidesEl.style.transition = 'none';
         current = originals;
-        slidesEl.style.transform = `translateX(${ -current * slideWidth() }px)`;
+        const translate = -current * width;
+        slidesEl.style.transform = `translateX(${translate}px)`;
+        Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
         void slidesEl.offsetWidth;
         slidesEl.style.transition = '';
+        update();
       }
-    });
+    };
 
-    // Improved drag/swipe support with live dragging, parallax, and 10% threshold
-    let isDragging = false;
-    let startX = 0;
-    let prevTranslate = 0;
+    function startTransitionMonitor(previousIndex){
+      if(previousIndex === current) return;
+      if(isDragging) return;
+      if(slidesEl.style.transition === 'none') return;
+      isTransitioning = true;
+      clearTransitionFailsafe();
+      transitionFailsafe = setTimeout(()=>{
+        if(!isTransitioning) return;
+        handleLoopBoundaries();
+        isTransitioning = false;
+      }, 700);
+    }
+
+    function setCurrentAug(nextIndex){
+      const clamped = clampAugIndex(nextIndex);
+      const previous = current;
+      current = clamped;
+      update();
+      startTransitionMonitor(previous);
+    }
+
+    function goToSlide(i){
+      if(originals === 0) return;
+      if(isTransitioning && !isDragging) return;
+      setCurrentAug(i+1);
+    }
+
+    function next(){
+      if(originals <= 1) return;
+      if(isTransitioning || isDragging) return;
+      setCurrentAug(current+1);
+    }
+
+    // Auto-advance every 10s
+    let auto = null;
+    function stopAuto(){
+      if(auto){
+        clearInterval(auto);
+        auto = null;
+      }
+    }
+    function startAuto(){
+      if(originals <= 1) return;
+      stopAuto();
+      auto = setInterval(next, 10000);
+    }
+    function resetAuto(){
+      stopAuto();
+      startAuto();
+    }
+    startAuto();
+
+    // Pause on hover
+    // Named handlers for cleanup
+    const onMouseEnter = ()=> stopAuto();
+    const onMouseLeave = ()=> { resetAuto(); };
+    if(slider){
+      slider.addEventListener('mouseenter', onMouseEnter);
+      slider.addEventListener('mouseleave', onMouseLeave);
+    }
+
+    // transition events: handle seamless jump when hitting clones and clean up flags
+    const onTransitionEnd = (ev)=>{
+      if(ev.target !== slidesEl || ev.propertyName !== 'transform') return;
+      handleLoopBoundaries();
+      isTransitioning = false;
+      clearTransitionFailsafe();
+    };
+    const onTransitionCancel = (ev)=>{
+      if(ev.target !== slidesEl) return;
+      if(ev.propertyName && ev.propertyName !== 'transform') return;
+      handleLoopBoundaries();
+      isTransitioning = false;
+      clearTransitionFailsafe();
+    };
+    slidesEl.addEventListener('transitionend', onTransitionEnd);
+    slidesEl.addEventListener('transitioncancel', onTransitionCancel);
+
+  // Improved drag/swipe support with live dragging, parallax, and 10% threshold
+  let startX = 0;
     function pxTranslate(x){ slidesEl.style.transform = `translateX(${x}px)`; }
     function slideWidth(){
       // Prefer the actual rendered slide width (accounts for padding/margins)
@@ -360,17 +503,20 @@
         const first = slidesEl.querySelector('.slide');
         if(first && first.clientWidth) return first.clientWidth;
       }catch(_){ }
-      return slider.clientWidth;
+      return slider ? slider.clientWidth : 0;
     }
     const thresholdRatio = 0.10; // 10%
 
     // Pointer handlers (named so they can be removed)
     const onPointerDown = (e)=>{
       isDragging = true;
-      slider.classList.add('dragging');
+      clearTransitionFailsafe();
+      isTransitioning = false;
+  if(slider) slider.classList.add('dragging');
       startX = e.clientX;
       prevTranslate = -current * slideWidth();
       slidesEl.style.transition = 'none';
+      stopAuto();
       try{ slidesEl.setPointerCapture(e.pointerId); }catch(_){/* ignore */}
     };
     const onPointerMove = (e)=>{
@@ -388,7 +534,7 @@
     const onPointerUp = (e)=>{
       if(!isDragging) return;
       isDragging = false;
-      slider.classList.remove('dragging');
+      if(slider) slider.classList.remove('dragging');
       slidesEl.style.transition = '';
       const dx = e.clientX - startX;
       const movedRatio = Math.abs(dx) / slideWidth();
@@ -404,7 +550,7 @@
     const onPointerCancel = ()=>{
       if(!isDragging) return;
       isDragging = false;
-      slider.classList.remove('dragging');
+      if(slider) slider.classList.remove('dragging');
       slidesEl.style.transition = '';
       setCurrentAug(current);
       Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)');
@@ -428,10 +574,15 @@
     window.addEventListener('resize', onResize);
 
     window.__ag_cleanup_slider = function(){
-      try{ clearInterval(auto); }catch(_){/* ignore */}
-      try{ slider.removeEventListener('mouseenter', onMouseEnter); slider.removeEventListener('mouseleave', onMouseLeave); }catch(_){ }
+      try{ stopAuto(); }catch(_){/* ignore */}
+      try{ if(slider){ slider.removeEventListener('mouseenter', onMouseEnter); slider.removeEventListener('mouseleave', onMouseLeave); } }catch(_){ }
       try{ slidesEl.removeEventListener('pointerdown', onPointerDown); slidesEl.removeEventListener('pointermove', onPointerMove); slidesEl.removeEventListener('pointerup', onPointerUp); slidesEl.removeEventListener('pointercancel', onPointerCancel); }catch(_){ }
-      try{ window.removeEventListener('resize', onResize); if(__ag_resize_timer) clearTimeout(__ag_resize_timer); }catch(_){ }
+      try{ slidesEl.removeEventListener('transitionend', onTransitionEnd); slidesEl.removeEventListener('transitioncancel', onTransitionCancel); }catch(_){ }
+      try{ window.removeEventListener('resize', onResize); if(__ag_resize_timer) { clearTimeout(__ag_resize_timer); __ag_resize_timer = null; } }catch(_){ }
+      try{ if(pendingUpdateRetry){ clearTimeout(pendingUpdateRetry); pendingUpdateRetry = null; } }catch(_){ }
+      try{ clearTransitionFailsafe(); }catch(_){ }
+      isTransitioning = false;
+      isDragging = false;
       try{ Array.from(slidesEl.querySelectorAll('img')).forEach(img=> img.style.transform = 'translateX(0px)'); }catch(_){ }
     };
 
@@ -506,7 +657,12 @@
       if(!age){ alert('Lütfen yaşınızı girin.'); return; }
       const payload = { interests: Array.from(selected), age };
       try{ localStorage.setItem(`ag_profile_${uid}`, JSON.stringify(payload)); setProfileComplete(uid, true); }catch(e){ console.error(e); }
-      renderMainForUser();
+      // After completing the survey, send user to the main homepage (unless the page opted out)
+      try{
+        if(!navigateToHome()){
+          renderMainForUser();
+        }
+      }catch(e){ renderMainForUser(); }
     });
   }
 
@@ -577,7 +733,11 @@
       document.body.appendChild(c);
       c.querySelector('#cancelSignOut').addEventListener('click', ()=>c.remove());
       c.querySelector('#confirmSignOut').addEventListener('click', async ()=>{
-        try{ await auth.signOut(); }catch(e){ console.error(e); }
+        try{ 
+          await auth.signOut();
+          // Navigate to landing page after sign out
+          window.location.href = 'index.html';
+        }catch(e){ console.error(e); }
         c.remove();
       });
     });
@@ -605,8 +765,12 @@
         // hide app area until they click Start
         if(appArea) appArea.style.display = 'none';
       } else {
-        // profile complete -> send to app area (don't auto-scroll during background auth init)
-        showAppArea({scroll:false});
+        // profile complete -> navigate to homepage (anasayfa.html) unless we're already there
+        if(isOnHomePage()){
+          showAppArea({scroll:false});
+        } else {
+          navigateToHome();
+        }
       }
     }catch(e){}
   }
@@ -664,20 +828,21 @@
         }
         // after successful auth, route based on profile completion
         if(user){
-          // If this was a fresh signup, immediately send them to the app area (survey)
           if(mode === 'signup'){
-            modal.remove(); showAppArea({scroll:true});
+            modal.remove();
+            // New signup - stay on index.html and show profile form
+            showAppArea({scroll:true});
+          } else if(isProfileComplete(user.uid)){
+            modal.remove();
+            if(allowHomeRedirect()) window.location.href = 'anasayfa.html';
           } else {
-            if(isProfileComplete(user.uid)){
-              modal.remove(); showAppArea({scroll:true});
-            } else {
-              modal.remove();
-              // show hero so user can click Start and fill initial info
-              if(heroSection) heroSection.style.display = '';
-              const openSign = document.getElementById('openSignin'); if(openSign) openSign.style.display = 'none';
-            }
+            modal.remove();
+            // Existing user but profile incomplete - show the form
+            showAppArea({scroll:true});
           }
-        } else modal.remove();
+        } else {
+          modal.remove();
+        }
       }catch(e){
         // Translate common Firebase errors to Turkish, but do not expose backend details for wrong credentials
         const code = e && e.code ? e.code : null;
@@ -707,8 +872,20 @@
         if(!r.ok){ openSetupModal(r); return; }
         try{
           const provider = new firebase.auth.GoogleAuthProvider();
-          await auth.signInWithPopup(provider);
+          const result = await auth.signInWithPopup(provider);
+          const user = result && result.user ? result.user : auth.currentUser;
           modal.remove();
+          
+          // Check if this is a new user or existing user without profile
+          if(user){
+            if(!isProfileComplete(user.uid)){
+              // Show profile form on index.html
+              showAppArea({scroll:true});
+            } else if(allowHomeRedirect()){
+              // Profile complete, go to homepage
+              window.location.href = 'anasayfa.html';
+            }
+          }
   }catch(e){ modal.querySelector('.auth-error').textContent = translateAuthError(e && e.code ? e.code : null, e && e.message ? e.message : 'Giriş sırasında hata oluştu.'); }
       });
     }
@@ -772,9 +949,14 @@
     const r = ensureAuthInitialized();
     if(!r.ok){ openSetupModal(r); return; }
     // If user is already signed in, go to the app area (which will render profile form if needed).
-    if(firebaseInitialized && auth){
+      if(firebaseInitialized && auth){
       if(auth.currentUser){
-        showAppArea({scroll:true});
+        // If user already signed-in, send to homepage (unless redirects disabled)
+        if(isOnHomePage()){
+          showAppArea({scroll:true});
+        } else if(allowHomeRedirect()){
+          window.location.href = 'anasayfa.html';
+        }
       } else {
         // Sometimes auth.currentUser is not immediately available right after createUserWithEmailAndPassword.
         // Retry briefly (up to ~2s) before falling back to opening the signup modal.
@@ -783,7 +965,11 @@
         const tryShow = () => {
           attempts++;
           if(auth.currentUser){
-            showAppArea({scroll:true});
+            if(isOnHomePage()){
+              showAppArea({scroll:true});
+            } else if(allowHomeRedirect()){
+              window.location.href = 'anasayfa.html';
+            }
           } else if(attempts < maxAttempts){
             setTimeout(tryShow, 100);
           } else {
