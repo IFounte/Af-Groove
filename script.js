@@ -1,30 +1,41 @@
 // Theme toggling
-(function(){
-  const root = document.documentElement;
-  const stored = localStorage.getItem('theme');
-  if(stored) document.documentElement.setAttribute('data-theme', stored);
+(function initThemeToggle(){
+  const applyTheme = (theme)=>{
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const btn = document.getElementById('themeToggle');
+    if(btn){
+      btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      btn.classList.toggle('is-light', theme === 'light');
+    }
+  };
+  try{
+    const stored = localStorage.getItem('theme');
+    if(stored){ applyTheme(stored); }
+  }catch(_){ }
 
-  const btn = document.getElementById('themeToggle');
-  if(btn){
-    // initialize aria state
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    btn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
-    // reflect initial visual state on the button
-    btn.classList.toggle('is-light', isLight);
-    // toggle handler respects prefers-reduced-motion
+  function wire(){
+    const btn = document.getElementById('themeToggle');
+    if(!btn) return false;
+    if(btn.__wired) return true;
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    btn.setAttribute('aria-pressed', currentTheme === 'light' ? 'true' : 'false');
+    btn.classList.toggle('is-light', currentTheme === 'light');
     btn.addEventListener('click', ()=>{
+      const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      applyTheme(next);
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', current);
-      localStorage.setItem('theme', current);
-      btn.setAttribute('aria-pressed', current === 'light' ? 'true' : 'false');
-      btn.classList.toggle('is-light', current === 'light');
-      if(!reduce){
-        // small tactile animation (scale) handled by CSS :active; briefly add a class to emphasize toggle
-        btn.classList.add('toggled');
-        setTimeout(()=>btn.classList.remove('toggled'), 240);
-      }
+      if(!reduce){ btn.classList.add('toggled'); setTimeout(()=>btn.classList.remove('toggled'), 240); }
     });
+    btn.__wired = true;
+    return true;
+  }
+  // Attempt immediate wire, if not present (defer script ordering) retry a few times
+  if(!wire()){
+    let attempts = 0; const max = 20;
+    const iv = setInterval(()=>{
+      if(wire() || ++attempts >= max){ clearInterval(iv); }
+    }, 150);
   }
 })();
 

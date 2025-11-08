@@ -8,6 +8,199 @@
   let firebaseInitialized = false;
   let firstInitHandled = false;
 
+  // ===== Daily Streak helpers =====
+  function ymdLocal(date){
+    const d = date ? new Date(date) : new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function parseYMD(ymd){
+    if(!ymd) return null;
+    const [y,m,d] = ymd.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+  function daysBetweenYMD(aYmd, bYmd){
+    if(!aYmd || !bYmd) return NaN;
+    const a = parseYMD(aYmd), b = parseYMD(bYmd);
+    if(!a || !b) return NaN;
+    const ms = b.setHours(0,0,0,0) - a.setHours(0,0,0,0);
+    return Math.round(ms / 86400000);
+  }
+  function streakKey(uid){ return `ag_streak_${uid}`; }
+  function loadStreak(uid){
+    try{
+      const raw = localStorage.getItem(streakKey(uid));
+      if(!raw) return { count: 0, lastDay: null, lastShownDay: null, pendingCelebrate: false, visits: [] };
+      const obj = JSON.parse(raw);
+      return Object.assign({ count: 0, lastDay: null, lastShownDay: null, pendingCelebrate: false, visits: [] }, obj||{});
+    }catch(_){ return { count:0, lastDay:null, lastShownDay:null, pendingCelebrate:false, visits: [] }; }
+  }
+  function saveStreak(uid, obj){
+    try{ localStorage.setItem(streakKey(uid), JSON.stringify(obj)); }catch(_){ }
+    return obj;
+  }
+  // Update daily streak and mark celebration pending when continued streak
+  function updateDailyStreak(uid){
+    const today = ymdLocal();
+    let s = loadStreak(uid);
+    // ensure visits array exists
+    if(!Array.isArray(s.visits)) s.visits = [];
+    const addVisitIfMissing = ()=>{ if(!s.visits.includes(today)) s.visits.push(today); };
+
+    if(!s.lastDay){
+      // first ever visit
+      s.count = 1; s.lastDay = today; s.pendingCelebrate = false; // don't celebrate first day
+      addVisitIfMissing();
+      saveStreak(uid, s);
+      return { changed:true, streak:s };
+    }
+    if(s.lastDay === today){
+      // already counted today; nothing to do
+      addVisitIfMissing();
+      saveStreak(uid, s);
+      return { changed:false, streak:s };
+    }
+    const diff = daysBetweenYMD(s.lastDay, today);
+    if(diff === 1){
+      // continued streak
+      s.count = (s.count||0) + 1;
+      s.lastDay = today;
+      s.pendingCelebrate = true; // show +1 once on any page
+      addVisitIfMissing();
+      saveStreak(uid, s);
+      return { changed:true, streak:s };
+    }
+    // missed at least one day -> reset
+    s.count = 1;
+    s.lastDay = today;
+    s.pendingCelebrate = false;
+    addVisitIfMissing();
+    saveStreak(uid, s);
+    return { changed:true, streak:s };
+  }
+  function ensureStreakPill(){
+    const pill = document.getElementById('streakPill');
+    if(pill) return pill;
+    // If userArea exists, inject a minimal pill container (fallback)
+    if(userArea){
+      const wrapper = userArea.querySelector('.signed-in');
+      if(wrapper){
+        const el = document.createElement('div');
+        el.className = 'streak-pill';
+        el.id = 'streakPill';
+        el.title = 'Günlük Seri';
+        el.innerHTML = '🔥 <span id="streakCount">0</span>';
+        wrapper.insertBefore(el, wrapper.firstChild);
+        return el;
+      }
+    }
+    return null;
+  }
+  function renderOrUpdateStreakPill(count){
+    const pill = ensureStreakPill();
+    if(!pill) return;
+    const c = pill.querySelector('#streakCount');
+    if(c) c.textContent = String(count||0);
+  }
+  function showStreakIfPending(uid){
+    const today = ymdLocal();
+    const s = loadStreak(uid);
+    if(!s) return;
+    if(s.pendingCelebrate && s.count >= 2 && s.lastShownDay !== today){
+      // Show modal once
+      openStreakCelebrateModal(s.count);
+      s.pendingCelebrate = false;
+      s.lastShownDay = today;
+      saveStreak(uid, s);
+    }
+  }
+  function openStreakCelebrateModal(newCount){
+    const modal = document.createElement('div');
+    modal.className = 'streak-modal';
+    modal.innerHTML = `
+      <div class="streak-card" role="dialog" aria-modal="true" aria-labelledby="streakTitle">
+        <div class="streak-icon">🔥</div>
+        <div class="streak-text">
+          <div id="streakTitle" class="streak-title">Günlük Seri!</div>
+          <div class="streak-sub">Serin arttı</div>
+        </div>
+        <div class="plus-one">+1</div>
+        <div class="streak-total">${newCount} Gün</div>
+        <button class="btn secondary close-streak" aria-label="Kapat">Tamam</button>
+      </div>`;
+    document.body.appendChild(modal);
+    // auto close after 2.2s or on click
+    const closer = ()=>{ try{ modal.remove(); }catch(_){ } };
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) closer(); });
+    modal.querySelector('.close-streak')?.addEventListener('click', closer);
+    setTimeout(closer, 2200);
+    // brief pulse on pill if present
+    try{
+      const pill = document.getElementById('streakPill');
+      if(pill){ pill.classList.add('pulse'); setTimeout(()=> pill.classList.remove('pulse'), 1200); }
+    }catch(_){ }
+  }
+
+  function openStreakHistoryModal(uid){
+    const s = loadStreak(uid);
+    const today = parseYMD(ymdLocal());
+    let windowOffsetDays = 0; // 0 means window ends today
+    const hasVisit = (dateYmd)=> Array.isArray(s.visits) && s.visits.includes(dateYmd);
+
+    const renderWindow = ()=>{
+      const modal = document.getElementById('streakHistoryModal');
+      const grid = modal?.querySelector('.week-grid');
+      if(!modal || !grid) return;
+      grid.innerHTML = '';
+      // Show 7 sequential days ending at (today - windowOffsetDays), oldest -> newest left to right
+      const endDate = new Date(today); // newest day in window
+      endDate.setDate(endDate.getDate() - windowOffsetDays);
+      const startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - 6); // oldest day in window
+      const TR_DAYS = ['Paz','Pts','Sal','Çar','Per','Cum','Cmt'];
+      for(let i=0;i<7;i++){
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + i);
+        const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const weekday = TR_DAYS[d.getDay()] || '';
+        const label = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+        const cell = document.createElement('div');
+        cell.className = 'day' + (hasVisit(ymd) ? ' has-visit' : '');
+        const ariaState = hasVisit(ymd) ? 'Giriş yapıldı' : 'Giriş yok';
+        cell.setAttribute('aria-label', `${label} ${ariaState}`);
+        cell.innerHTML = `<div class="wday">${weekday}</div><div class="dlabel">${label}</div>`;
+        grid.appendChild(cell);
+      }
+      // enable/disable right arrow (cannot go into future beyond today)
+      const right = modal.querySelector('#histRight');
+      if(right) right.disabled = (windowOffsetDays <= 0);
+    };
+
+    const modal = document.createElement('div');
+    modal.className = 'streak-history-modal';
+    modal.id = 'streakHistoryModal';
+    modal.innerHTML = `
+      <div class="streak-history-card" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+        <div class="hist-header">
+          <button class="hist-nav" id="histLeft" aria-label="Geçmiş hafta">◀</button>
+          <div id="histTitle" class="hist-title">Son 7 Gün</div>
+          <button class="hist-nav" id="histRight" aria-label="İleri hafta">▶</button>
+        </div>
+        <div class="week-grid"></div>
+        <div class="hist-legend"><span class="dot yes"></span> Girdiğin günler</div>
+        <div class="hist-actions"><button class="btn secondary" id="histClose">Kapat</button></div>
+      </div>`;
+    document.body.appendChild(modal);
+    const closer = ()=>{ try{ modal.remove(); }catch(_){ } };
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) closer(); });
+    modal.querySelector('#histClose')?.addEventListener('click', closer);
+    modal.querySelector('#histLeft')?.addEventListener('click', ()=>{ windowOffsetDays += 7; renderWindow(); });
+    modal.querySelector('#histRight')?.addEventListener('click', ()=>{ windowOffsetDays = Math.max(0, windowOffsetDays - 7); renderWindow(); });
+    renderWindow();
+  }
+
   function isOnHomePage(){
     try{
       const path = (location && location.pathname ? location.pathname : '').toLowerCase();
@@ -691,8 +884,27 @@
     const initials = (user.displayName ? user.displayName.split(' ').map(s=>s[0]).join('') : (user.email||'').slice(0,2)).toUpperCase();
     userArea.innerHTML = `
       <div class="signed-in user-menu">
+        <div class="notify-bell" id="notifyBell" title="Bildirimler" tabindex="0" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 0 0-12 0v3.2c0 .53-.21 1.04-.59 1.41L4 17h5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 17a3 3 0 0 0 6 0" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="notify-badge" id="notifyBadge" style="display:none">0</span>
+          <div class="notifications-dropdown" id="notificationsDropdown" aria-label="Bildirimler">
+            <div class="notifications-header">
+              <h3>Bildirimler</h3>
+              <div class="notifications-actions">
+                <button class="btn secondary" id="markAllRead" style="padding:6px 10px">Tümünü okundu işaretle</button>
+              </div>
+            </div>
+            <div class="notifications-list" id="notificationsList"></div>
+            <div class="notifications-empty" id="notificationsEmpty" style="display:none">Yeni bildirim yok.</div>
+          </div>
+        </div>
+        <div class="streak-pill" id="streakPill" title="Günlük Seri">🔥 <span id="streakCount">0</span></div>
         <div class="user-bubble" id="userBubble">${initials}</div>
         <div class="menu-dropdown" id="menuDropdown">
+          <div class="menu-item" id="menuProfile">Profil</div>
           <div class="menu-item" id="manageAccount">Hesabı Yönet</div>
           <div class="menu-item" id="menuSignOut">Çıkış Yap</div>
         </div>
@@ -717,6 +929,10 @@
 
     // close dropdown on outside click
     document.addEventListener('click', function docClose(){ if(dropdown && dropdown.classList.contains('show')) dropdown.classList.remove('show'); });
+
+    document.getElementById('menuProfile').addEventListener('click', ()=>{
+      window.location.href = 'profil.html';
+    });
 
     document.getElementById('menuSignOut').addEventListener('click', ()=>{
       // confirmation modal
@@ -743,17 +959,7 @@
     });
 
     document.getElementById('manageAccount').addEventListener('click', ()=>{
-      // For now open a simple modal showing email and a placeholder
-      const m = document.createElement('div'); m.className='auth-modal';
-      m.innerHTML = `
-        <div class="auth-card">
-          <button class="close">×</button>
-          <h3>Hesap Bilgileri</h3>
-          <p><strong>Email:</strong> ${user.email}</p>
-          <p>Profil yönetimi için daha fazla özellik eklenebilir.</p>
-        </div>`;
-      document.body.appendChild(m);
-      m.querySelector('.close').addEventListener('click', ()=>m.remove());
+      window.location.href = 'account.html';
     });
     // If user hasn't completed initial profile, show hero and hide "Zaten bir hesabım var" button
     try{
@@ -773,6 +979,107 @@
         }
       }
     }catch(e){}
+
+    // Update streak and reflect in navbar; show celebration if pending
+    try{
+      const result = updateDailyStreak(user.uid);
+      renderOrUpdateStreakPill(result && result.streak ? result.streak.count : 0);
+      // Defer celebration check a tick to allow DOM to settle
+      setTimeout(()=> showStreakIfPending(user.uid), 250);
+    }catch(_){ }
+
+    // Make streak pill clickable to open history
+    try{
+      const pill = document.getElementById('streakPill');
+      if(pill){
+        const open = (ev)=>{ ev?.stopPropagation?.(); openStreakHistoryModal(user.uid); };
+        pill.style.cursor = 'pointer';
+        pill.addEventListener('click', open);
+        pill.setAttribute('tabindex','0');
+        pill.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); open(e); } });
+      }
+    }catch(_){ }
+
+    // Notifications: fetch and render
+    try{
+      const bell = document.getElementById('notifyBell');
+      const drop = document.getElementById('notificationsDropdown');
+      const list = document.getElementById('notificationsList');
+      const empty = document.getElementById('notificationsEmpty');
+      const badge = document.getElementById('notifyBadge');
+      const markAll = document.getElementById('markAllRead');
+      const uid = user.uid;
+      const storageKey = `ag_notifications_read_${uid}`;
+      const getRead = ()=>{ try{ return JSON.parse(localStorage.getItem(storageKey)||'[]'); }catch(_){ return []; } };
+      const setRead = (arr)=>{ try{ localStorage.setItem(storageKey, JSON.stringify(arr)); }catch(_){ } };
+
+      async function fetchNotifications(){
+        try{
+          const res = await fetch('notifications.json', { cache: 'no-cache' });
+          if(!res.ok) throw new Error('http-error');
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
+        }catch(_){ return []; }
+      }
+
+      function render(items){
+        const read = new Set(getRead());
+        const unread = items.filter(it=> !read.has(String(it.id)));
+        if(badge){ badge.textContent = String(unread.length); badge.style.display = unread.length>0 ? '' : 'none'; }
+        if(!items.length){ empty.style.display = ''; list.innerHTML = ''; return; }
+        empty.style.display = 'none';
+        list.innerHTML = '';
+        items.sort((a,b)=> (b.time||'').localeCompare(a.time||''));
+        items.forEach(it=>{
+          const el = document.createElement('div');
+          el.className = 'notification-item' + (read.has(String(it.id)) ? '' : ' unread');
+          const date = it.time ? new Date(it.time) : null;
+          const when = date ? date.toLocaleString() : '';
+          el.innerHTML = `<h4>${it.title||'Yeni içerik'}</h4><p>${it.body||''}</p><div class="notification-time">${when}</div>`;
+          el.addEventListener('click', ()=>{
+            // mark read on click
+            const curr = getRead();
+            const sid = String(it.id);
+            if(!curr.includes(sid)){ curr.push(sid); setRead(curr); }
+            el.classList.remove('unread');
+            const n = Math.max(0, parseInt(badge.textContent||'0')-1); badge.textContent = String(n); badge.style.display = n>0 ? '' : 'none';
+            if(it.url){
+              const samePage = location.pathname.endsWith('index.html') && it.url.startsWith('index.html');
+              if(samePage){
+                // Only adjust hash without full reload for better UX
+                const parts = it.url.split('#');
+                if(parts[1]){
+                  history.replaceState(null,'', '#'+parts[1]);
+                  // attempt smooth scroll to target if exists
+                  const target = document.getElementById(parts[1]) || document.querySelector(`[data-section='${parts[1]}']`);
+                  if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }
+                }
+              }else{
+                window.location.href = it.url;
+              }
+            }
+            // close dropdown after click
+            drop.classList.remove('show');
+            bell.setAttribute('aria-expanded','false');
+          });
+          list.appendChild(el);
+        });
+      }
+
+      fetchNotifications().then((items)=>{
+        render(items);
+        // wire mark all once items are known
+        markAll.addEventListener('click', ()=>{ const allIds = items.map(it=> String(it.id)); setRead(allIds); render(items); });
+      });
+      // toggle dropdown
+      const toggle = (open)=>{
+        drop.classList.toggle('show', open);
+        bell.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      bell.addEventListener('click', (e)=>{ e.stopPropagation(); toggle(!drop.classList.contains('show')); });
+      bell.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(!drop.classList.contains('show')); }});
+      document.addEventListener('click', (e)=>{ if(drop.classList.contains('show') && !bell.contains(e.target)) toggle(false); });
+    }catch(_){ }
   }
 
   // Basic modal UI (DOM creation)
