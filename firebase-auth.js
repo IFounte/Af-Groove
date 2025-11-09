@@ -906,6 +906,7 @@
         <div class="menu-dropdown" id="menuDropdown">
           <div class="menu-item" id="menuProfile">Profil</div>
           <div class="menu-item" id="manageAccount">Hesabı Yönet</div>
+           <div class="menu-item" id="menuInstructors">Eğitmenlerimiz</div>
           <div class="menu-item" id="menuSignOut">Çıkış Yap</div>
         </div>
       </div>
@@ -1080,6 +1081,14 @@
       bell.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(!drop.classList.contains('show')); }});
       document.addEventListener('click', (e)=>{ if(drop.classList.contains('show') && !bell.contains(e.target)) toggle(false); });
     }catch(_){ }
+
+    // Instructors navigation
+    try {
+      const menuInstructors = document.getElementById('menuInstructors');
+      if(menuInstructors){
+        menuInstructors.addEventListener('click', ()=>{ window.location.href = 'egitmenlerimiz.html'; });
+      }
+    } catch(_){ }
   }
 
   // Basic modal UI (DOM creation)

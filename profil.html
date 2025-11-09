@@ -257,18 +257,55 @@
         sm.querySelector('#saveSel').addEventListener('click', ()=>{ if(chosen){ cb && cb(chosen); } sm.remove(); });
       }
 
+      // Yeni rozet tanımları (tüm önceki rozetler kaldırıldı). Şimdilik tek tip ikon kullanılıyor.
       const BADGE_DEFS = [
-        {id:'ilk-giris', title:'İlk Giriş', desc:'İlk kez giriş yaptın.', icon:'✓'},
-        {id:'profil-doldur', title:'Profil Tamam', desc:'Profil bilgilerini doldurdun.', icon:'👤'},
-        {id:'3-ilgi', title:'Meraklı', desc:'3 ilgi alanı seçtin.', icon:'★'},
-        {id:'5-ilgi', title:'Koleksiyoncu', desc:'5+ ilgi alanı seçtin.', icon:'🏆'},
-        {id:'tema-degistir', title:'Tema Ustası', desc:'Temayı değiştirdin.', icon:'🌓'},
-        {id:'hafta-1', title:'1. Hafta', desc:'1. haftayı aktif geçirdin.', icon:'📆'}
+        {id:'hos-geldin-yolcusu', title:'Hoş Geldin Yolcusu', desc:'İlk giriş ve anketi tamamlayan.', icon:'🏅'},
+        {id:'kasif', title:'Kaşif', desc:'İlk videoyu izleyen.', icon:'🏅'},
+        {id:'oyuncu', title:'Oyuncu', desc:'İlk etkileşimli içeriği tamamlayan.', icon:'🏅'},
+        {id:'kultur-gezgini', title:'Kültür Gezgini', desc:'3 farklı kategoriden içerik deneyen.', icon:'🏅'},
+        {id:'gelenek-bekcisi', title:'Gelenek Bekçisi', desc:'7 gün üst üste giriş yapan.', icon:'🏅'},
+        {id:'istikrar-ustasi', title:'İstikrar Ustası', desc:'10 gün üst üste giriş yapan.', icon:'🏅'},
+        {id:'aliskanlik-ustasi', title:'Alışkanlık Ustası', desc:'21 gün aktif kalan.', icon:'🏅'},
+        {id:'gelenek-koruyucusu', title:'Gelenek Koruyucusu', desc:'30 gün boyunca kesintisiz giriş.', icon:'🏅'},
+        {id:'mini-seri-yolcusu', title:'Mini Seri Yolcusu', desc:'5 gün üst üste giriş yapan.', icon:'🏅'},
+        {id:'kultur-destekcisi', title:'Kültür Destekçisi', desc:'Proje anketini dolduran.', icon:'🏅'},
+        {id:'cirak', title:'Çırak', desc:'Bir eğitimin ilk kısmını tamamlayan.', icon:'🏅'},
+        {id:'groover', title:'Groover', desc:'Eğitim içi bir aşamayı bitiren.', icon:'🏅'},
+        {id:'groover-plus', title:'Groover+', desc:'Bir eğitimi tamamen bitiren.', icon:'🏅'},
+        {id:'kurs-ustasi', title:'Kurs Ustası', desc:'Her kursun kendine özel bitirme rozeti.', icon:'🏅'},
+        {id:'gercek-uzman', title:'Gerçek Uzman', desc:'Tüm kategorilerden 1 kurs tamamlayan.', icon:'🏅'},
+        {id:'tekrarci', title:'Tekrarcı', desc:'Aynı içeriği ikinci kez tamamlayan.', icon:'🏅'},
+        {id:'seri-bitirici', title:'Seri Bitirici', desc:'Arka arkaya 3 kurs bitiren.', icon:'🏅'},
+        {id:'derin-ogrenen', title:'Derin Öğrenen', desc:'Orta seviye bir kursu bitiren.', icon:'🏅'},
+        {id:'ustaliga-giden-yol', title:'Ustalığa Giden Yol', desc:'İleri seviye kurs bitiren.', icon:'🏅'},
+        {id:'surekli-ogrenen', title:'Sürekli Öğrenen', desc:'20 içerik tamamlayan.', icon:'🏅'},
+        {id:'ritim-yolcusu', title:'Ritim Yolcusu', desc:'İlk müzik/dans eğitimini bitiren.', icon:'🏅'},
+        {id:'kalp-atisi', title:'Kalp Atışı', desc:'Bir ritim egzersizini tamamlayan.', icon:'🏅'},
+        {id:'dans-ustasi', title:'Dans Ustası', desc:'Bir dans eğitiminin tüm seviyelerini bitiren.', icon:'🏅'},
+        {id:'ritmik-geri-donus', title:'Ritmik Geri Dönüş', desc:'Aynı dansı tekrar çalışıp gelişim gösteren.', icon:'🏅'},
+        {id:'makam-kesfedicisi', title:'Makam Keşfedicisi', desc:'3 farklı müzik türünü deneyen.', icon:'🏅'},
+        {id:'seviye-atlama', title:'Seviye Atlama Rozeti', desc:'Müziğin 1–2–3. seviye rozetleri.', icon:'🏅'},
+        {id:'el-emegi-yolcusu', title:'El Emeği Yolcusu', desc:'İlk el sanatı içeriğini tamamlayan.', icon:'🏅'},
+        {id:'atolye-ciragi', title:'Atölye Çırağı', desc:'Projeyi tamamlayıp #groove ile paylaşan.', icon:'🏅'},
+        {id:'motif-kesfedicisi', title:'Motif Keşfedicisi', desc:'3 farklı teknik izleyen.', icon:'🏅'},
+        {id:'geleneksel-zanaatkar', title:'Geleneksel Zanaatkâr', desc:'Bir el sanatı dalında tüm seviyeleri tamamlayan.', icon:'�'},
+        {id:'el-sanati-arsivcisi', title:'El Sanatı Arşivcisi', desc:'10 el sanatı videosu tamamlayan.', icon:'🏅'},
+        {id:'zanaat-yolcusu', title:'Zanaat Yolcusu', desc:'El sanatı mini sınavını bitiren.', icon:'🏅'},
+        {id:'desen-avcisi', title:'Desen Avcısı', desc:'İşlenen desenleri doğru tanımlayan.', icon:'🏅'},
+        {id:'atolye-sadakati', title:'Atölye Sadakati', desc:'Aynı dersi ikinci kez yapan.', icon:'🏅'},
+        {id:'hikaye-avcisi', title:'Hikaye Avcısı', desc:'İlk hikayeyi tamamlayan.', icon:'🏅'},
+        {id:'diyar-gezgini', title:'Diyar Gezgini', desc:'5 farklı bölgeye ait hikaye dinleyen.', icon:'�'},
+        {id:'masal-koleksiyoncusu', title:'Masal Koleksiyoncusu', desc:'10 hikaye bitiren.', icon:'🏅'},
+        {id:'bilge-yolcu', title:'Bilge Yolcu', desc:'Kültürel mini testleri geçen.', icon:'🏅'},
+        {id:'hikaye-uzmani', title:'Hikaye Uzmanı', desc:'3 uzun hikayeyi bitiren.', icon:'🏅'},
+        {id:'egitmen-rozeti', title:'Eğitmen Rozeti', desc:'Eğitmenlere özel.', icon:'🏅'},
+        {id:'gelistirici-rozeti', title:'Geliştirici Rozeti', desc:'Geliştiricilere özel.', icon:'🏅'}
       ];
+      const ALL_BADGE_IDS = BADGE_DEFS.map(b=>b.id);
 
       function achievementsKey(uid){ return `ag_achievements_${uid}`; }
       function loadAchievements(uid){
-        try{ return JSON.parse(localStorage.getItem(achievementsKey(uid))||'[]'); }catch(_){ return []; }
+        try{ const raw = JSON.parse(localStorage.getItem(achievementsKey(uid))||'[]'); return Array.isArray(raw) ? raw.filter(id=> ALL_BADGE_IDS.includes(id)) : []; }catch(_){ return []; }
       }
       function saveAchievements(uid, arr){
         try{ localStorage.setItem(achievementsKey(uid), JSON.stringify(arr)); }catch(_){ }
@@ -277,6 +314,15 @@
 
       function renderBadges(uid){
         const grid = document.getElementById('badgesGrid'); if(!grid) return;
+        // Özel kullanıcıya (Founte2) tüm rozetleri otomatik ver.
+        const user = (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser : null;
+        if(user){
+          const nameCheck = (user.displayName||'').toLowerCase() === 'founte2';
+          const emailLocal = (user.email||'').split('@')[0].toLowerCase();
+          if(nameCheck || emailLocal === 'founte2'){
+            saveAchievements(uid, ALL_BADGE_IDS);
+          }
+        }
         const earned = new Set(loadAchievements(uid));
         grid.innerHTML = '';
         BADGE_DEFS.forEach(def=>{
