@@ -237,6 +237,12 @@
         auth.onAuthStateChanged(user=>{
           if(user) {
             renderSignedIn(user);
+            
+            // Rozet sistemini kontrol et ve ilk giriş rozetini ver
+            if(window.badges && typeof window.badges.checkAndAwardBadges === 'function'){
+              window.badges.checkAndAwardBadges(user.uid).catch(err => console.error('Badge check error:', err));
+            }
+            
                 // on first init, if profile complete send user to the dedicated homepage
                 if(!firstInitHandled){
                   firstInitHandled = true;
@@ -324,10 +330,12 @@
     const allSlides = [
       {id:'baglama', title:'Bağlama Eğitimi', img: encodeURI('assets/Bağlama_yatay.png'), desc:'Bağlama çalmayı öğrenin: akorlar, ritimler ve repertuar.'},
       {id:'ney', title:'Ney ve Üflemeli Çalgılar', img: encodeURI('assets/Ney_yatay.png'), desc:'Ney teknikleri ve nefes çalışmaları ile müzikal yolculuğunuzu başlatın.'},
-      {id:'gorsel', title:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png'), desc:'Görsel sanatlar: resim, kompozisyon ve farklı tekniklerle yaratıcılığınızı keşfedin.'},
-      {id:'halk', title:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png'), desc:'Yerel dans stilleri ve koreografilerle kültürel mirası yaşayın.'},
-  {id:'ut', title:'Ut Eğitimi', img: encodeURI('assets/Ut.png'), desc:'Ut öğrenin: temel teknikler, makamlar ve icra pratikleri.'},
-  {id:'halkhikaye', title:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png'), desc:'Halk hikayeleri ve anonim kültürel anlatılarla geçmişe yolculuk.'}
+      {id:'hat', title:'Hat Sanatı', img: encodeURI('assets/Hat.png'), desc:'Hat sanatı ile İslam hat yazısı ve kaligrafi tekniklerini öğrenin.'},
+      {id:'ebru', title:'Ebru Sanatı', img: encodeURI('assets/Ebru.png'), desc:'Su üzerinde şekillenen renklerle geleneksel ebru sanatını keşfedin.'},
+      {id:'cilt', title:'Cilt Sanatı', img: encodeURI('assets/Cilt.png'), desc:'Geleneksel cilt sanatı ve kitap süsleme tekniklerini öğrenin.'},
+      {id:'bendir', title:'Bendir', img: encodeURI('assets/Bendir.png'), desc:'Bendir çalma teknikleri ve ritim çalışmaları ile tanışın.'},
+      {id:'ut', title:'Ut Eğitimi', img: encodeURI('assets/Ut.png'), desc:'Ut öğrenin: temel teknikler, makamlar ve icra pratikleri.'},
+      {id:'halkhikaye', title:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png'), desc:'Halk hikayeleri ve anonim kültürel anlatılarla geçmişe yolculuk.'}
     ];
 
   // Build slides list by prioritizing user's selected interests first, then the rest
@@ -435,8 +443,10 @@
         const pageMap = {
           baglama: 'baglama.html',
           ney: 'ney.html',
-          gorsel: 'gorsel.html',
-          halk: 'halk.html',
+          hat: 'hat.html',
+          ebru: 'ebru.html',
+          cilt: 'cilt.html',
+          bendir: 'bendir.html',
           ut: 'ut.html',
           halkhikaye: 'halkhikaye.html'
         };
@@ -804,8 +814,10 @@
     const interests = [
       {id:'baglama', label:'Bağlama', img: encodeURI('assets/Bağlama_yatay.png')},
       {id:'ney', label:'Ney', img: encodeURI('assets/Ney_yatay.png')},
-      {id:'gorsel', label:'Görsel Sanatlar', img: encodeURI('assets/Görsel Sanatlar.png')},
-      {id:'halk', label:'Halk Oyunları', img: encodeURI('assets/Halk Oyunları Yatay.png')},
+      {id:'hat', label:'Hat Sanatı', img: encodeURI('assets/Hat.png')},
+      {id:'ebru', label:'Ebru Sanatı', img: encodeURI('assets/Ebru.png')},
+      {id:'cilt', label:'Cilt Sanatı', img: encodeURI('assets/Cilt.png')},
+      {id:'bendir', label:'Bendir', img: encodeURI('assets/Bendir.png')},
       {id:'ut', label:'Ut', img: encodeURI('assets/Ut.png')},
       {id:'halkhikaye', label:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png')}
     ];
@@ -820,7 +832,8 @@
         </div>
         <div id="stepAge" style="display:none">
           <label>Yaşın:</label>
-          <input id="pf_age" type="number" min="8" max="120" />
+          <input id="pf_age" type="number" min="12" max="99" />
+          <div id="pf_age_error" style="margin-top:6px;font-size:12px;color:#ff6b6b;display:none"></div>
           <div class="profile-actions"><button id="pfSave" class="btn primary">Kaydet ve İlerle</button></div>
         </div>
       </div>
@@ -845,11 +858,24 @@
       document.getElementById('stepAge').style.display = '';
     });
 
-    document.getElementById('pfSave').addEventListener('click', ()=>{
-      const age = document.getElementById('pf_age').value.trim();
-      if(!age){ alert('Lütfen yaşınızı girin.'); return; }
-      const payload = { interests: Array.from(selected), age };
+    document.getElementById('pfSave').addEventListener('click', async ()=>{
+      const ageInput = document.getElementById('pf_age');
+      const ageRaw = ageInput.value.trim();
+      const errEl = document.getElementById('pf_age_error');
+      if(!ageRaw){ errEl.textContent='Lütfen yaşınızı girin.'; errEl.style.display='block'; ageInput.focus(); return; }
+      const num = Number(ageRaw);
+      if(Number.isNaN(num) || num < 12 || num > 99){
+        errEl.textContent='Uygun bir değer giriniz.'; errEl.style.display='block'; ageInput.focus(); return;
+      }
+      errEl.style.display='none';
+      const payload = { interests: Array.from(selected), age: String(num) };
       try{ localStorage.setItem(`ag_profile_${uid}`, JSON.stringify(payload)); setProfileComplete(uid, true); }catch(e){ console.error(e); }
+      
+      // Anket tamamlama rozeti ver
+      if(window.badges && typeof window.badges.awardBadge === 'function'){
+        window.badges.awardBadge(uid, 'anket-ustasi').catch(err => console.error('Badge award error:', err));
+      }
+      
       // After completing the survey, send user to the main homepage (unless the page opted out)
       try{
         if(!navigateToHome()){
@@ -985,6 +1011,12 @@
     try{
       const result = updateDailyStreak(user.uid);
       renderOrUpdateStreakPill(result && result.streak ? result.streak.count : 0);
+      // Achievements: event-based streak milestones
+      try{
+        if(window.achievementEvent && result && result.streak){
+          window.achievementEvent(user, 'streak_update', { streakCount: result.streak.count });
+        }
+      }catch(_){ }
       // Defer celebration check a tick to allow DOM to settle
       setTimeout(()=> showStreakIfPending(user.uid), 250);
     }catch(_){ }
@@ -1089,6 +1121,9 @@
         menuInstructors.addEventListener('click', ()=>{ window.location.href = 'egitmenlerimiz.html'; });
       }
     } catch(_){ }
+
+    // Trigger achievements minimal login badge (first login) and special user logic
+    try{ if(window.achievementsOnLogin){ window.achievementsOnLogin(user); } }catch(_){ }
   }
 
   // Basic modal UI (DOM creation)
@@ -1265,38 +1300,15 @@
     const r = ensureAuthInitialized();
     if(!r.ok){ openSetupModal(r); return; }
     // If user is already signed in, go to the app area (which will render profile form if needed).
-      if(firebaseInitialized && auth){
-      if(auth.currentUser){
-        // If user already signed-in, send to homepage (unless redirects disabled)
-        if(isOnHomePage()){
-          showAppArea({scroll:true});
-        } else if(allowHomeRedirect()){
-          window.location.href = 'anasayfa.html';
-        }
-      } else {
-        // Sometimes auth.currentUser is not immediately available right after createUserWithEmailAndPassword.
-        // Retry briefly (up to ~2s) before falling back to opening the signup modal.
-        let attempts = 0;
-        const maxAttempts = 20; // ~2 seconds
-        const tryShow = () => {
-          attempts++;
-          if(auth.currentUser){
-            if(isOnHomePage()){
-              showAppArea({scroll:true});
-            } else if(allowHomeRedirect()){
-              window.location.href = 'anasayfa.html';
-            }
-          } else if(attempts < maxAttempts){
-            setTimeout(tryShow, 100);
-          } else {
-            // Fallback: show signup modal so user can sign in manually
-            openAuthModal('signup');
-          }
-        };
-        tryShow();
+    if(firebaseInitialized && auth && auth.currentUser){
+      // User already signed in - redirect immediately
+      if(isOnHomePage()){
+        showAppArea({scroll:true});
+      } else if(allowHomeRedirect()){
+        window.location.href = 'anasayfa.html';
       }
     } else {
-      // Not initialized or not signed in yet -> open signup modal
+      // Not signed in - open signup modal
       openAuthModal('signup');
     }
   });

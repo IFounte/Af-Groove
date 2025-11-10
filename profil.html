@@ -9,10 +9,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <!-- Firebase SDKs and config loaded so auth-observer in firebase-auth.js can run and render the app -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="supabase-config.js"></script>
     <script>
       // Disable automatic redirect to homepage on auth
       window.AG_DISABLE_HOME_REDIRECT = true;
@@ -26,7 +32,6 @@
             <img class="brand-logo" src="assets/afgroove-full.svg" alt="AF-GROOVE" />
           </a>
         </div>
-
         <div class="top-controls">
           <div id="userArea" class="user-area" aria-live="polite"></div>
 
@@ -73,12 +78,12 @@
             <h1 class="profile-username" id="profileUsername">Kullanıcı Adı</h1>
             <button id="editProfileBtn" class="btn secondary small" aria-label="Profili düzenle">Düzenle</button>
           </div>
-          <section class="badges-section" aria-labelledby="badgesTitle">
-            <h2 id="badgesTitle">Rozetler</h2>
-            <div class="badges-grid" id="badgesGrid">
-              <!-- Badges will be rendered here by script; initial placeholders: -->
-            </div>
-          </section>
+        </div>
+
+        <!-- Rozetler Bölümü -->
+        <div class="badges-section">
+          <h2>Rozetler</h2>
+          <div id="badgeCarousel"></div>
         </div>
       </section>
     </main>
@@ -87,8 +92,9 @@
       <small>© <span id="year"></span> AF-GROOVE</small>
     </footer>
 
-    <script src="script.js" defer></script>
-    <script src="firebase-auth.js" defer></script>
+  <script src="script.js" defer></script>
+  <script src="badges-supabase.js" defer></script>
+  <script src="firebase-auth.js" defer></script>
     <script>
       // Load profile data when page loads
       window.addEventListener('load', () => {
@@ -130,8 +136,10 @@
             const editBtn = document.getElementById('editProfileBtn');
             if(editBtn){ editBtn.addEventListener('click', ()=> openEditProfile(user.uid)); }
 
-            // Render badges
-            renderBadges(user.uid);
+            // Render badges carousel
+            if(window.badges && typeof window.badges.renderBadgeCarousel === 'function'){
+              window.badges.renderBadgeCarousel(user.uid);
+            }
           }
         }, 500);
       });
@@ -172,7 +180,8 @@
               </div>
               <div class="field">
                 <label>Yaş</label>
-                <input id="inpAge" type="number" min="8" max="120" />
+                <input id="inpAge" type="number" min="12" max="99" />
+                <div id="ageError" style="margin-top:4px;font-size:12px;color:#ff6b6b;display:none"></div>
               </div>
             </div>
             <div class="edit-actions">
@@ -201,6 +210,23 @@
   bnPrev.addEventListener('click', ()=> openSelectModal('banner', (sel)=>{ if(sel){ bnPrev.dataset.selectedId = sel; bnPrev.textContent = 'Seçili'; } }));
 
         modal.querySelector('#saveEdit').addEventListener('click', ()=>{
+          // Age validation
+          let ageVal = ageEl.value.trim();
+          if(ageVal){
+            const num = Number(ageVal);
+            if(Number.isNaN(num) || num < 12 || num > 99){
+              const err = modal.querySelector('#ageError');
+              if(err){
+                err.textContent = 'Uygun bir değer giriniz.';
+                err.style.display = 'block';
+              }
+              ageEl.focus();
+              return; // abort save
+            } else {
+              const err = modal.querySelector('#ageError');
+              if(err){ err.style.display = 'none'; }
+            }
+          }
           const patch = {
             displayName: nameEl.value.trim() || undefined,
             age: ageEl.value ? String(ageEl.value).trim() : undefined,
@@ -208,6 +234,11 @@
             bannerId: bnPrev && bnPrev.dataset && bnPrev.dataset.selectedId ? bnPrev.dataset.selectedId : (data.bannerId||undefined)
           };
           const next = saveStoredProfile(uid, patch);
+
+          // Profil tamamlama rozeti ver (eğer isim ve yaş varsa)
+          if(next.displayName && next.age && window.badges && typeof window.badges.awardBadge === 'function'){
+            window.badges.awardBadge(uid, 'profil-tamamla').catch(err => console.error('Badge award error:', err));
+          }
 
           // Apply to UI
           const username = document.getElementById('profileUsername');
@@ -257,94 +288,6 @@
         sm.querySelector('#saveSel').addEventListener('click', ()=>{ if(chosen){ cb && cb(chosen); } sm.remove(); });
       }
 
-      // Yeni rozet tanımları (tüm önceki rozetler kaldırıldı). Şimdilik tek tip ikon kullanılıyor.
-      const BADGE_DEFS = [
-        {id:'hos-geldin-yolcusu', title:'Hoş Geldin Yolcusu', desc:'İlk giriş ve anketi tamamlayan.', icon:'🏅'},
-        {id:'kasif', title:'Kaşif', desc:'İlk videoyu izleyen.', icon:'🏅'},
-        {id:'oyuncu', title:'Oyuncu', desc:'İlk etkileşimli içeriği tamamlayan.', icon:'🏅'},
-        {id:'kultur-gezgini', title:'Kültür Gezgini', desc:'3 farklı kategoriden içerik deneyen.', icon:'🏅'},
-        {id:'gelenek-bekcisi', title:'Gelenek Bekçisi', desc:'7 gün üst üste giriş yapan.', icon:'🏅'},
-        {id:'istikrar-ustasi', title:'İstikrar Ustası', desc:'10 gün üst üste giriş yapan.', icon:'🏅'},
-        {id:'aliskanlik-ustasi', title:'Alışkanlık Ustası', desc:'21 gün aktif kalan.', icon:'🏅'},
-        {id:'gelenek-koruyucusu', title:'Gelenek Koruyucusu', desc:'30 gün boyunca kesintisiz giriş.', icon:'🏅'},
-        {id:'mini-seri-yolcusu', title:'Mini Seri Yolcusu', desc:'5 gün üst üste giriş yapan.', icon:'🏅'},
-        {id:'kultur-destekcisi', title:'Kültür Destekçisi', desc:'Proje anketini dolduran.', icon:'🏅'},
-        {id:'cirak', title:'Çırak', desc:'Bir eğitimin ilk kısmını tamamlayan.', icon:'🏅'},
-        {id:'groover', title:'Groover', desc:'Eğitim içi bir aşamayı bitiren.', icon:'🏅'},
-        {id:'groover-plus', title:'Groover+', desc:'Bir eğitimi tamamen bitiren.', icon:'🏅'},
-        {id:'kurs-ustasi', title:'Kurs Ustası', desc:'Her kursun kendine özel bitirme rozeti.', icon:'🏅'},
-        {id:'gercek-uzman', title:'Gerçek Uzman', desc:'Tüm kategorilerden 1 kurs tamamlayan.', icon:'🏅'},
-        {id:'tekrarci', title:'Tekrarcı', desc:'Aynı içeriği ikinci kez tamamlayan.', icon:'🏅'},
-        {id:'seri-bitirici', title:'Seri Bitirici', desc:'Arka arkaya 3 kurs bitiren.', icon:'🏅'},
-        {id:'derin-ogrenen', title:'Derin Öğrenen', desc:'Orta seviye bir kursu bitiren.', icon:'🏅'},
-        {id:'ustaliga-giden-yol', title:'Ustalığa Giden Yol', desc:'İleri seviye kurs bitiren.', icon:'🏅'},
-        {id:'surekli-ogrenen', title:'Sürekli Öğrenen', desc:'20 içerik tamamlayan.', icon:'🏅'},
-        {id:'ritim-yolcusu', title:'Ritim Yolcusu', desc:'İlk müzik/dans eğitimini bitiren.', icon:'🏅'},
-        {id:'kalp-atisi', title:'Kalp Atışı', desc:'Bir ritim egzersizini tamamlayan.', icon:'🏅'},
-        {id:'dans-ustasi', title:'Dans Ustası', desc:'Bir dans eğitiminin tüm seviyelerini bitiren.', icon:'🏅'},
-        {id:'ritmik-geri-donus', title:'Ritmik Geri Dönüş', desc:'Aynı dansı tekrar çalışıp gelişim gösteren.', icon:'🏅'},
-        {id:'makam-kesfedicisi', title:'Makam Keşfedicisi', desc:'3 farklı müzik türünü deneyen.', icon:'🏅'},
-        {id:'seviye-atlama', title:'Seviye Atlama Rozeti', desc:'Müziğin 1–2–3. seviye rozetleri.', icon:'🏅'},
-        {id:'el-emegi-yolcusu', title:'El Emeği Yolcusu', desc:'İlk el sanatı içeriğini tamamlayan.', icon:'🏅'},
-        {id:'atolye-ciragi', title:'Atölye Çırağı', desc:'Projeyi tamamlayıp #groove ile paylaşan.', icon:'🏅'},
-        {id:'motif-kesfedicisi', title:'Motif Keşfedicisi', desc:'3 farklı teknik izleyen.', icon:'🏅'},
-        {id:'geleneksel-zanaatkar', title:'Geleneksel Zanaatkâr', desc:'Bir el sanatı dalında tüm seviyeleri tamamlayan.', icon:'�'},
-        {id:'el-sanati-arsivcisi', title:'El Sanatı Arşivcisi', desc:'10 el sanatı videosu tamamlayan.', icon:'🏅'},
-        {id:'zanaat-yolcusu', title:'Zanaat Yolcusu', desc:'El sanatı mini sınavını bitiren.', icon:'🏅'},
-        {id:'desen-avcisi', title:'Desen Avcısı', desc:'İşlenen desenleri doğru tanımlayan.', icon:'🏅'},
-        {id:'atolye-sadakati', title:'Atölye Sadakati', desc:'Aynı dersi ikinci kez yapan.', icon:'🏅'},
-        {id:'hikaye-avcisi', title:'Hikaye Avcısı', desc:'İlk hikayeyi tamamlayan.', icon:'🏅'},
-        {id:'diyar-gezgini', title:'Diyar Gezgini', desc:'5 farklı bölgeye ait hikaye dinleyen.', icon:'�'},
-        {id:'masal-koleksiyoncusu', title:'Masal Koleksiyoncusu', desc:'10 hikaye bitiren.', icon:'🏅'},
-        {id:'bilge-yolcu', title:'Bilge Yolcu', desc:'Kültürel mini testleri geçen.', icon:'🏅'},
-        {id:'hikaye-uzmani', title:'Hikaye Uzmanı', desc:'3 uzun hikayeyi bitiren.', icon:'🏅'},
-        {id:'egitmen-rozeti', title:'Eğitmen Rozeti', desc:'Eğitmenlere özel.', icon:'🏅'},
-        {id:'gelistirici-rozeti', title:'Geliştirici Rozeti', desc:'Geliştiricilere özel.', icon:'🏅'}
-      ];
-      const ALL_BADGE_IDS = BADGE_DEFS.map(b=>b.id);
-
-      function achievementsKey(uid){ return `ag_achievements_${uid}`; }
-      function loadAchievements(uid){
-        try{ const raw = JSON.parse(localStorage.getItem(achievementsKey(uid))||'[]'); return Array.isArray(raw) ? raw.filter(id=> ALL_BADGE_IDS.includes(id)) : []; }catch(_){ return []; }
-      }
-      function saveAchievements(uid, arr){
-        try{ localStorage.setItem(achievementsKey(uid), JSON.stringify(arr)); }catch(_){ }
-      }
-      function hasAchievement(uid, id){ return loadAchievements(uid).includes(id); }
-
-      function renderBadges(uid){
-        const grid = document.getElementById('badgesGrid'); if(!grid) return;
-        // Özel kullanıcıya (Founte2) tüm rozetleri otomatik ver.
-        const user = (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser : null;
-        if(user){
-          const nameCheck = (user.displayName||'').toLowerCase() === 'founte2';
-          const emailLocal = (user.email||'').split('@')[0].toLowerCase();
-          if(nameCheck || emailLocal === 'founte2'){
-            saveAchievements(uid, ALL_BADGE_IDS);
-          }
-        }
-        const earned = new Set(loadAchievements(uid));
-        grid.innerHTML = '';
-        BADGE_DEFS.forEach(def=>{
-          const el = document.createElement('div');
-          el.className = 'badge' + (earned.has(def.id) ? ' earned' : ' locked');
-          el.setAttribute('tabindex','0');
-          el.innerHTML = `<div class="icon-wrap" aria-hidden="true">${def.icon}</div><div class="b-title">${def.title}</div><div class="b-desc">${def.desc}</div>`;
-          grid.appendChild(el);
-        });
-      }
-
-      // Expose award function for future triggers
-      window.awardBadge = function(id){
-        if(typeof firebase === 'undefined' || !firebase.auth || !firebase.auth().currentUser) return;
-        const uid = firebase.auth().currentUser.uid;
-        const current = loadAchievements(uid);
-        if(!current.includes(id)){
-          current.push(id);
-          saveAchievements(uid, current);
-          renderBadges(uid);
-        }
-      };
     </script>
   </body>
 </html>

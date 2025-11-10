@@ -750,26 +750,131 @@ body:has(.profile-container) main{
   .img-preview-banner{height:120px}
 }
 
-/* Badges section */
-.badges-section{margin-top:24px;padding-top:12px;border-top:1px solid var(--border);}
-.badges-section h2{margin:0 0 16px 0;font-size:20px;font-weight:700;letter-spacing:.5px}
-.badges-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
-.badge{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 18px rgba(0,0,0,0.25);transition:transform 160ms ease, box-shadow 160ms ease}
-.badge .icon-wrap{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;background:var(--accent);color:var(--surface);box-shadow:0 4px 12px rgba(0,0,0,0.25)}
-.badge .b-title{font-size:14px;font-weight:600;text-align:center;color:var(--text)}
-.badge .b-desc{font-size:12px;line-height:1.3;color:var(--muted);text-align:center}
-.badge.locked .icon-wrap{background:linear-gradient(135deg,#3a4456,#262f40);color:#94a3b8;filter:grayscale(.6);}
-.badge.locked{opacity:.65}
-.badge.locked .b-title{color:#94a3b8}
-.badge.locked .b-desc{color:#64748b}
-.badge.earned{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),0 6px 24px rgba(0,0,0,0.35)}
-.badge:hover{transform:translateY(-4px);box-shadow:0 10px 32px rgba(0,0,0,0.35)}
-.badge:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 50%, transparent);}
+/* Badges UI removed */
 
-@media (max-width:600px){
-  .badges-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
-  .badge{padding:12px 8px}
-  .badge .icon-wrap{width:56px;height:56px;font-size:24px}
+/* Rozet Carousel Sistemi */
+.badges-section{
+  margin-top:32px;
+  padding:24px;
+  background:var(--surface);
+  border-radius:16px;
+  border:1px solid var(--border);
+}
+.badges-section h2{
+  margin:0 0 20px 0;
+  font-size:22px;
+  font-weight:700;
+  letter-spacing:.5px;
+  color:var(--text);
+}
+.badge-carousel-wrapper{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:16px;
+}
+.badge-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:16px;
+  flex:1;
+}
+.badge-item{
+  background:var(--panel);
+  border:2px solid var(--border);
+  border-radius:14px;
+  padding:16px 12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  transition:all 200ms ease;
+  min-height:160px;
+}
+.badge-item.earned{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(139,92,246,.2), 0 4px 16px rgba(0,0,0,.3);
+  background:linear-gradient(135deg, var(--panel), var(--surface));
+}
+.badge-item.locked{
+  opacity:.4;
+  filter:grayscale(.8);
+}
+.badge-icon{
+  font-size:48px;
+  width:72px;
+  height:72px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--surface);
+  border-radius:50%;
+  border:2px solid var(--border);
+}
+.badge-item.earned .badge-icon{
+  background:linear-gradient(135deg,var(--accent),#a78bfa);
+  border-color:var(--accent);
+  box-shadow:0 4px 12px rgba(139,92,246,.4);
+}
+.badge-title{
+  font-size:14px;
+  font-weight:600;
+  text-align:center;
+  color:var(--text);
+  line-height:1.3;
+}
+.badge-desc{
+  font-size:12px;
+  line-height:1.4;
+  color:var(--muted);
+  text-align:center;
+}
+.badge-nav-btn{
+  background:var(--surface);
+  border:2px solid var(--border);
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 160ms ease;
+  color:var(--text);
+  flex-shrink:0;
+}
+.badge-nav-btn:hover:not(:disabled){
+  background:var(--accent);
+  border-color:var(--accent);
+  transform:scale(1.08);
+  box-shadow:0 4px 14px rgba(139,92,246,.4);
+}
+.badge-nav-btn:disabled{
+  opacity:.3;
+  cursor:not-allowed;
+}
+.badge-progress{
+  text-align:center;
+  font-size:14px;
+  font-weight:600;
+  color:var(--muted);
+  letter-spacing:.5px;
+}
+
+@media (max-width:1200px){
+  .badge-grid{grid-template-columns:repeat(4,1fr);}
+}
+@media (max-width:768px){
+  .badge-grid{grid-template-columns:repeat(3,1fr);}
+  .badges-section{padding:20px;}
+  .badge-item{min-height:140px;padding:12px 10px;}
+  .badge-icon{font-size:36px;width:56px;height:56px;}
+}
+@media (max-width:480px){
+  .badge-grid{grid-template-columns:repeat(2,1fr);gap:12px;}
+  .badge-carousel-wrapper{gap:12px;}
+  .badge-nav-btn{width:40px;height:40px;}
+  .badge-item{min-height:130px;}
 }
 
 /* Account page specific polish */
