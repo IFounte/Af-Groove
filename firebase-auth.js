@@ -333,9 +333,9 @@
       {id:'hat', title:'Hat Sanatı', img: encodeURI('assets/Hat.png'), desc:'Hat sanatı ile İslam hat yazısı ve kaligrafi tekniklerini öğrenin.'},
       {id:'ebru', title:'Ebru Sanatı', img: encodeURI('assets/Ebru.png'), desc:'Su üzerinde şekillenen renklerle geleneksel ebru sanatını keşfedin.'},
       {id:'cilt', title:'Cilt Sanatı', img: encodeURI('assets/Cilt.png'), desc:'Geleneksel cilt sanatı ve kitap süsleme tekniklerini öğrenin.'},
-      {id:'bendir', title:'Bendir', img: encodeURI('assets/Bendir.png'), desc:'Bendir çalma teknikleri ve ritim çalışmaları ile tanışın.'},
+      {id:'bendir', title:'Bendir', img: encodeURI('assets/bendir.png'), desc:'Bendir çalma teknikleri ve ritim çalışmaları ile tanışın.'},
       {id:'ut', title:'Ut Eğitimi', img: encodeURI('assets/Ut.png'), desc:'Ut öğrenin: temel teknikler, makamlar ve icra pratikleri.'},
-      {id:'halkhikaye', title:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png'), desc:'Halk hikayeleri ve anonim kültürel anlatılarla geçmişe yolculuk.'}
+      {id:'halkhikaye', title:'Halk Hikayeleri', img: encodeURI('assets/HalkHikayeleri.png'), desc:'Halk hikayeleri ve anonim kültürel anlatılarla geçmişe yolculuk.'}
     ];
 
   // Build slides list by prioritizing user's selected interests first, then the rest
@@ -817,9 +817,9 @@
       {id:'hat', label:'Hat Sanatı', img: encodeURI('assets/Hat.png')},
       {id:'ebru', label:'Ebru Sanatı', img: encodeURI('assets/Ebru.png')},
       {id:'cilt', label:'Cilt Sanatı', img: encodeURI('assets/Cilt.png')},
-      {id:'bendir', label:'Bendir', img: encodeURI('assets/Bendir.png')},
+      {id:'bendir', label:'Bendir', img: encodeURI('assets/bendir.png')},
       {id:'ut', label:'Ut', img: encodeURI('assets/Ut.png')},
-      {id:'halkhikaye', label:'Halk Hikayeleri', img: encodeURI('assets/halkhikayeleri.png')}
+      {id:'halkhikaye', label:'Halk Hikayeleri', img: encodeURI('assets/HalkHikayeleri.png')}
     ];
 
     appArea.innerHTML = `
