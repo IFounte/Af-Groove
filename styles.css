@@ -193,7 +193,17 @@ header.top{
 main{flex:1;display:flex;align-items:center;justify-content:center;padding:28px 18px}
 
 .ghost-wrap{flex:0 0 240px;display:flex;align-items:center;justify-content:center}
-.ghost{transform-origin:50% 0;animation:swing 3s ease-in-out infinite}
+.ghost{
+  transform-origin:50% 0;
+  animation:swing 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  background: transparent !important;
+  /* SVG'nin arka planını tamamen şeffaf yap */
+}
+[data-theme="light"] .ghost{
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.25));
+  background: transparent !important;
+}
 
 @keyframes swing{
   0%{transform:rotate(-6deg)}
