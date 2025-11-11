@@ -235,11 +235,6 @@
           };
           const next = saveStoredProfile(uid, patch);
 
-          // Profil tamamlama rozeti ver (eğer isim ve yaş varsa)
-          if(next.displayName && next.age && window.badges && typeof window.badges.awardBadge === 'function'){
-            window.badges.awardBadge(uid, 'profil-tamamla').catch(err => console.error('Badge award error:', err));
-          }
-
           // Apply to UI
           const username = document.getElementById('profileUsername');
           if(username){

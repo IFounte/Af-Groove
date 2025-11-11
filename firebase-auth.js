@@ -54,6 +54,12 @@
       s.count = 1; s.lastDay = today; s.pendingCelebrate = false; // don't celebrate first day
       addVisitIfMissing();
       saveStreak(uid, s);
+      
+      // İlk giriş rozetlerini kontrol et
+      if(window.badges && typeof window.badges.checkStreakBadges === 'function'){
+        window.badges.checkStreakBadges(uid, s).catch(err => console.error('Streak badge error:', err));
+      }
+      
       return { changed:true, streak:s };
     }
     if(s.lastDay === today){
@@ -70,6 +76,12 @@
       s.pendingCelebrate = true; // show +1 once on any page
       addVisitIfMissing();
       saveStreak(uid, s);
+      
+      // Streak rozetlerini kontrol et
+      if(window.badges && typeof window.badges.checkStreakBadges === 'function'){
+        window.badges.checkStreakBadges(uid, s).catch(err => console.error('Streak badge error:', err));
+      }
+      
       return { changed:true, streak:s };
     }
     // missed at least one day -> reset
@@ -238,11 +250,6 @@
           if(user) {
             renderSignedIn(user);
             
-            // Rozet sistemini kontrol et ve ilk giriş rozetini ver
-            if(window.badges && typeof window.badges.checkAndAwardBadges === 'function'){
-              window.badges.checkAndAwardBadges(user.uid).catch(err => console.error('Badge check error:', err));
-            }
-            
                 // on first init, if profile complete send user to the dedicated homepage
                 if(!firstInitHandled){
                   firstInitHandled = true;
@@ -387,7 +394,21 @@
 
       <section style="padding:14px 18px">
         <h2>Yeni İlgi Alanları</h2>
-        <div class="all-interests-grid" id="allInterestsRow"></div>
+        <div class="interests-carousel-wrapper">
+          <button class="interests-nav-btn prev" id="interestsPrev">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="interests-scroll-container">
+            <div class="all-interests-grid" id="allInterestsRow"></div>
+          </div>
+          <button class="interests-nav-btn next" id="interestsNext">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </section>
     `;
 
@@ -536,13 +557,59 @@
       if(allRow){
         // clear any existing children
         allRow.innerHTML = '';
-        allSlides.forEach(s=>{
+        
+        // Get user's selected interests
+        const user = auth && auth.currentUser;
+        let userInterests = [];
+        if(user){
+          const raw = localStorage.getItem(`ag_profile_${user.uid}`);
+          if(raw){
+            const profile = JSON.parse(raw);
+            if(profile && Array.isArray(profile.interests)){
+              userInterests = profile.interests.map(String);
+            }
+          }
+        }
+        
+        // Filter out user's selected interests - show only what they haven't picked
+        const unselectedSlides = allSlides.filter(s => !userInterests.includes(s.id));
+        
+        unselectedSlides.forEach(s=>{
           const c = document.createElement('div'); c.className='interest-card'; c.setAttribute('data-id', s.id);
           c.innerHTML = `<div class="thumb"><img src="${s.img}" alt="${s.title}" loading="lazy" decoding="async"/></div><div class="label">${s.title}</div><div class="desc">${s.desc}</div>`;
           allRow.appendChild(c);
           // if this is the Bağlama card, make it navigate to its dedicated page
           try{ if(typeof wireCardNav === 'function') wireCardNav(c, s.id); }catch(_){ }
         });
+
+        // Setup carousel navigation
+        const scrollContainer = document.querySelector('.interests-scroll-container');
+        const prevBtn = document.getElementById('interestsPrev');
+        const nextBtn = document.getElementById('interestsNext');
+
+        if(scrollContainer && prevBtn && nextBtn){
+          const updateButtons = ()=>{
+            const scrollLeft = scrollContainer.scrollLeft;
+            const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+            prevBtn.disabled = scrollLeft <= 1;
+            nextBtn.disabled = scrollLeft >= maxScroll - 1;
+          };
+
+          prevBtn.addEventListener('click', ()=>{
+            const containerWidth = scrollContainer.clientWidth;
+            scrollContainer.scrollBy({ left: -containerWidth, behavior: 'smooth' });
+            setTimeout(updateButtons, 400);
+          });
+
+          nextBtn.addEventListener('click', ()=>{
+            const containerWidth = scrollContainer.clientWidth;
+            scrollContainer.scrollBy({ left: containerWidth, behavior: 'smooth' });
+            setTimeout(updateButtons, 400);
+          });
+
+          scrollContainer.addEventListener('scroll', updateButtons);
+          updateButtons();
+        }
       }
     }catch(e){console.warn('Could not populate allInterestsRow', e);} 
 
@@ -871,9 +938,9 @@
       const payload = { interests: Array.from(selected), age: String(num) };
       try{ localStorage.setItem(`ag_profile_${uid}`, JSON.stringify(payload)); setProfileComplete(uid, true); }catch(e){ console.error(e); }
       
-      // Anket tamamlama rozeti ver
+      // Hoş Geldin Yolcusu rozeti ver (anket tamamlama)
       if(window.badges && typeof window.badges.awardBadge === 'function'){
-        window.badges.awardBadge(uid, 'anket-ustasi').catch(err => console.error('Badge award error:', err));
+        window.badges.awardBadge(uid, 'hos-geldin-yolcusu').catch(err => console.error('Badge award error:', err));
       }
       
       // After completing the survey, send user to the main homepage (unless the page opted out)
