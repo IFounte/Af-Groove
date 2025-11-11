@@ -19,6 +19,31 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="supabase-config.js"></script>
+    <script>
+      // Anasayfa koruma: Giriş yapmayan kullanıcıları index.html'e yönlendir
+      (function(){
+        if(typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined'){
+          try{
+            firebase.initializeApp(firebaseConfig);
+            firebase.auth().onAuthStateChanged(function(user){
+              if(!user){
+                // Kullanıcı giriş yapmamış, index.html'e yönlendir
+                window.location.href = 'index.html';
+              }
+            });
+          }catch(e){
+            // Firebase zaten initialize edilmiş olabilir
+            try{
+              firebase.auth().onAuthStateChanged(function(user){
+                if(!user){
+                  window.location.href = 'index.html';
+                }
+              });
+            }catch(_){}
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <header class="top">
