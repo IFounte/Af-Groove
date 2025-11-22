@@ -220,6 +220,15 @@
     }catch(_){ return false; }
   }
 
+  // Landing page = public entry (index.html or root). Only when auth changes on
+  // the landing page should we auto-redirect users into the internal homepage.
+  function isLandingPage(){
+    try{
+      const path = (location && location.pathname ? location.pathname : '').toLowerCase();
+      return path === '/' || path.endsWith('/index.html') || path.endsWith('index.html');
+    }catch(_){ return false; }
+  }
+
   function allowHomeRedirect(){
     try{ return !(typeof window !== 'undefined' && window.AG_DISABLE_HOME_REDIRECT); }
     catch(_){ return true; }
@@ -250,29 +259,32 @@
           if(user) {
             renderSignedIn(user);
             
-                // on first init, if profile complete send user to the dedicated homepage
+                // on first init: only auto-navigate when the auth change happens on the
+                // public landing page (index.html or root). This prevents forcing users
+                // back to the homepage when they intentionally visit other pages.
                 if(!firstInitHandled){
-                  firstInitHandled = true;
-                  try{
-                            if(isProfileComplete(user.uid)){
-                              // if we're already on the homepage, render in-place; otherwise navigate there (unless disabled)
-                              if(isOnHomePage()){
-                                showAppArea({scroll:false});
+                          firstInitHandled = true;
+                          try{
+                            const profileComplete = isProfileComplete(user.uid);
+                            if(profileComplete){
+                              // Only perform the auto-redirect flow when user arrived via landing page
+                              if(isLandingPage()){
+                                if(isOnHomePage()){
+                                  showAppArea({scroll:false});
+                                } else {
+                                  navigateToHome();
+                                }
                               } else {
-                                navigateToHome();
+                                // Not on landing page: do not redirect; simply render signed-in UI.
                               }
-                    } else {
-                      // Profile NOT complete - stay on index.html and show the survey
-                      if(isOnHomePage()){
-                        // if somehow on anasayfa.html without profile, go back to index
-                        window.location.href = 'index.html';
-                      } else {
-                        // we're on index.html - show the profile form
-                        showAppArea({scroll:true});
-                      }
-                    }
-                  }catch(e){ if(heroSection) heroSection.style.display = ''; }
-                }
+                            } else {
+                              // Profile not complete: if we're on landing page, show survey flow.
+                              if(isLandingPage()){
+                                showAppArea({scroll:true});
+                              }
+                            }
+                          }catch(e){ if(heroSection) heroSection.style.display = ''; }
+                        }
           } else {
             renderSignedOut();
           }
@@ -1065,11 +1077,17 @@
         // hide app area until they click Start
         if(appArea) appArea.style.display = 'none';
       } else {
-        // profile complete -> navigate to homepage (anasayfa.html) unless we're already there
+        // profile complete -> usually we want users to see the internal homepage,
+        // but we must not force-redirect when they intentionally visit another
+        // page (for example, 'egitmenlerimiz.html'). Only navigate automatically
+        // when the auth change happened on the public landing page (index/root).
         if(isOnHomePage()){
           showAppArea({scroll:false});
-        } else {
+        } else if(isLandingPage()){
+          // arriving from landing page -> move to internal homepage
           navigateToHome();
+        } else {
+          // intentionally on another page; do not redirect
         }
       }
     }catch(e){}

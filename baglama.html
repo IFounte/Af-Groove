@@ -58,6 +58,7 @@
       <div class="app-area" style="max-width:1000px;margin:18px auto;padding:24px;">
         <h1>Bağlama Eğitimi</h1>
         <p>Bağlama öğrenmeye hoşgeldiniz! Bu sayfada temel teknikler, makamlar ve başlangıç düzeyinden ileri düzeye kadar pratikler bulacaksınız.</p>
+
         <div style="display:flex;gap:18px;align-items:flex-start;margin-top:18px;flex-wrap:wrap;">
           <img src="assets/Bağlama_yatay.png" alt="Bağlama" style="width:420px;max-width:100%;height:auto;border-radius:10px;box-shadow:var(--shadow);" loading="lazy" decoding="async"/>
           <div style="flex:1;min-width:260px;">
@@ -74,6 +75,97 @@
             <p style="margin-top:18px;"><a href="anasayfa.html" class="btn secondary">Geri Dön</a></p>
           </div>
         </div>
+
+        <!-- Accordion with 5 main training sections; content panels are empty placeholders for now -->
+        <div class="baglama-accordion" aria-live="polite">
+          <div class="accordion-section">
+            <div class="accordion-header">
+              <div class="title">Giriş ve Tanışma</div>
+              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-1" title="Aç/Kapat">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div id="section-1" class="accordion-content" hidden>
+              <!-- Eğitim yolu: adacık (module chain) gösterimi -->
+              <div class="module-chain" role="list">
+                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 1: Hocayı tanıyalım">
+                  <div class="module-avatar">
+                    <img src="assets/yeniruh.svg" alt="Hocayı tanıyalım">
+                  </div>
+                  <div class="module-title">Hocayı tanıyalım</div>
+                </a>
+                <div class="module-connector" aria-hidden="true"></div>
+                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 2: Bağlamanın tarihi">
+                  <div class="module-avatar">
+                    <img src="assets/Bağlama_yatay.png" alt="Bağlamanın tarihi">
+                  </div>
+                  <div class="module-title">Bağlamanın tarihi</div>
+                </a>
+                <div class="module-connector" aria-hidden="true"></div>
+                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 3: Bağlamanın Bölümleri">
+                  <div class="module-avatar">
+                    <img src="assets/Bağlama_yatay.png" alt="Bağlamanın bölümleri">
+                  </div>
+                  <div class="module-title">Bağlamanın Bölümleri</div>
+                </a>
+                <div class="module-connector" aria-hidden="true"></div>
+                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 4: Bağlamanın Tutuşu">
+                  <div class="module-avatar">
+                    <img src="assets/Bağlama_yatay.png" alt="Bağlamanın tutuşu">
+                  </div>
+                  <div class="module-title">Bağlamanın Tutuşu</div>
+                </a>
+                <div class="module-connector" aria-hidden="true"></div>
+                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 5: Özet">
+                  <div class="module-avatar">
+                    <img src="assets/Bağlama_yatay.png" alt="Özet">
+                  </div>
+                  <div class="module-title">Özet</div>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-section">
+            <div class="accordion-header">
+              <div class="title">Temel Teknikler</div>
+              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-2" title="Aç/Kapat">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div id="section-2" class="accordion-content" hidden></div>
+          </div>
+
+          <div class="accordion-section">
+            <div class="accordion-header">
+              <div class="title">Ritim ve Çalışmalar</div>
+              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-3" title="Aç/Kapat">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div id="section-3" class="accordion-content" hidden></div>
+          </div>
+
+          <div class="accordion-section">
+            <div class="accordion-header">
+              <div class="title">Makam ve Teori</div>
+              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-4" title="Aç/Kapat">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div id="section-4" class="accordion-content" hidden></div>
+          </div>
+
+          <div class="accordion-section">
+            <div class="accordion-header">
+              <div class="title">Repertuar ve İleri Düzey</div>
+              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-5" title="Aç/Kapat">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div id="section-5" class="accordion-content" hidden></div>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -83,7 +175,65 @@
 
     <script src="script.js" defer></script>
     <script>
+      // keep homepage redirect disabled for this standalone content page
       window.AG_DISABLE_HOME_REDIRECT = true;
+
+      // Accordion toggle behavior for Bağlama Eğitimi
+      document.addEventListener('DOMContentLoaded', function(){
+        const toggles = Array.from(document.querySelectorAll('.accordion-toggle'));
+        toggles.forEach(btn=>{
+          const panelId = btn.getAttribute('aria-controls');
+          const panel = document.getElementById(panelId);
+          // ensure initial aria state
+          btn.setAttribute('aria-expanded', 'false');
+
+          // header click toggles too
+          const header = btn.closest('.accordion-section').querySelector('.accordion-header');
+          if(header){
+            header.addEventListener('click', (e)=>{
+              // prevent double toggle when clicking the button itself
+              if(e.target.closest('.accordion-toggle')) return;
+              btn.click();
+            });
+          }
+
+          btn.addEventListener('click', ()=>{
+            const isOpen = btn.getAttribute('aria-expanded') === 'true';
+            // close any other open panels (single-open behavior)
+            if(!isOpen){
+              document.querySelectorAll('.accordion-content.open').forEach(open=>{
+                const otherBtn = document.querySelector(`[aria-controls="${open.id}"]`);
+                if(otherBtn) otherBtn.setAttribute('aria-expanded','false');
+                open.style.maxHeight = open.scrollHeight + 'px';
+                // allow transition to kick in
+                requestAnimationFrame(()=>{
+                  open.style.maxHeight = '0px';
+                });
+                open.addEventListener('transitionend', function te(){
+                  open.hidden = true; open.classList.remove('open'); open.style.maxHeight = '';
+                  open.removeEventListener('transitionend', te);
+                });
+              });
+            }
+
+            if(isOpen){
+              // close this panel
+              panel.style.maxHeight = panel.scrollHeight + 'px';
+              requestAnimationFrame(()=>{ panel.style.maxHeight = '0px'; });
+              panel.addEventListener('transitionend', function te(){ panel.hidden = true; panel.classList.remove('open'); panel.style.maxHeight = ''; panel.removeEventListener('transitionend', te); });
+              btn.setAttribute('aria-expanded','false');
+            } else {
+              // open this panel
+              panel.hidden = false;
+              panel.classList.add('open');
+              // set to measured height
+              const height = panel.scrollHeight;
+              panel.style.maxHeight = height + 'px';
+              btn.setAttribute('aria-expanded','true');
+            }
+          });
+        });
+      });
     </script>
     <script src="firebase-auth.js" defer></script>
   </body>
