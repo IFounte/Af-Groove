@@ -1,23 +1,4 @@
 :root{
-  --bg: #0a0e1a;
-  --surface: #161b2e;
-  --panel: #1e2538;
-  --text: #e6eef8;
-  --sun-color: #ffd166;
-  --moon-color: #94a3b8;
-  --muted: #9fb0c8;
-  --muted2: #ffffff14;
-  --accent: #7bd389;
-  --glass: rgba(255,255,255,0.06);
-  --border: rgba(255,255,255,0.08);
-  /* navbar height used for consistent logo sizing */
-  --nav-height: 64px;
-  /* stronger, but still soft shadow for elevated surfaces in dark theme */
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --nav-shadow: 0 2px 16px rgba(0,0,0,0.5);
-}
-
-[data-theme="light"]{
   --bg: #e8ecf1;
   --surface: #f5f7fa;
   --panel: #ffffff;
@@ -27,13 +8,32 @@
   --accent: #2b9cdb;
   --glass: rgba(11,18,32,0.03);
   --border: rgba(11,18,32,0.1);
-  /* slightly increased shadow in light theme for better separation */
+  --nav-height: 64px;
+  /* light theme shadow */
   --shadow: 0 4px 20px rgba(11,18,32,0.08);
   --nav-shadow: 0 2px 12px rgba(11,18,32,0.1);
+  
+  --sun-color: #ffd166;
+  --moon-color: #94a3b8;
 }
 
-/* lighter header shadow in light theme */
-[data-theme="light"] header.top{ box-shadow: var(--nav-shadow); }
+[data-theme="dark"]{
+  --bg: #0a0e1a;
+  --surface: #161b2e;
+  --panel: #1e2538;
+  --text: #e6eef8;
+  --muted: #9fb0c8;
+  --muted2: #ffffff14;
+  --accent: #7bd389;
+  --glass: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.08);
+  /* dark theme shadow */
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --nav-shadow: 0 2px 16px rgba(0,0,0,0.5);
+}
+
+/* lighter header shadow in light theme (default now) */
+header.top{ box-shadow: var(--nav-shadow); }
 
 *{box-sizing:border-box}
 html,body{height:100%;}

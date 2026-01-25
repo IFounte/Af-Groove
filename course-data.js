@@ -16,7 +16,7 @@ const COURSES = {
             id: 'mod-1-1',
             title: "Hocayı Tanıyalım",
             type: 'video',
-            videoUrl: '',
+            videoUrl: 'https://www.youtube.com/watch?v=M8si-domlLU',
             poster: 'assets/yeniruh.svg',
             duration: '2:30',
             description: 'Eğitmenimiz ile tanışın ve kursun hedeflerini öğrenin.'
