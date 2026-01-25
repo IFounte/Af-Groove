@@ -1,240 +1,234 @@
 <!doctype html>
 <html lang="tr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bağlama - AF-GROOVE</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <!-- Firebase (compat) SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-    <!-- Copy firebase-config.example.js -> firebase-config.js and fill your config -->
-    <script src="firebase-config.js"></script>
-  </head>
-  <body>
-    <header class="top">
-      <div class="top-inner">
-        <div class="brand">
-          <a href="anasayfa.html"><img class="brand-logo" src="assets/afgroove-full.svg" alt="AF-GROOVE" /></a>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bağlama - AF-GROOVE</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Firebase (compat) SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <!-- Copy firebase-config.example.js -> firebase-config.js and fill your config -->
+  <script src="firebase-config.js"></script>
+  <script src="course-data.js"></script>
+</head>
+
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <a href="anasayfa.html"><img class="brand-logo" src="assets/afgroove-full.svg" alt="AF-GROOVE" /></a>
+      </div>
+      <div class="top-controls">
+        <div id="userArea" class="user-area" aria-live="polite">
+          <!-- Auth script fills this area when user signed in -->
         </div>
-        <div class="top-controls">
-          <div id="userArea" class="user-area" aria-live="polite">
-            <!-- Auth script fills this area when user signed in -->
+
+        <div class="header-auth" id="headerAuth">
+          <button id="headerSignupBtn" class="btn primary">Kayıt Ol</button>
+          <button id="headerSigninBtn" class="btn secondary">Giriş Yap</button>
+        </div>
+
+        <button class="theme-toggle" id="themeToggle" aria-label="Tema değiştir">
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-knob" aria-hidden="true">
+            <svg class="sun" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true">
+              <circle cx="12" cy="12" r="5" fill="currentColor" />
+              <g fill="currentColor">
+                <circle cx="12" cy="3" r="1.1" />
+                <circle cx="12" cy="21" r="1.1" />
+                <circle cx="21" cy="12" r="1.1" />
+                <circle cx="3" cy="12" r="1.1" />
+                <circle cx="18.5" cy="5.5" r="1.1" />
+                <circle cx="5.5" cy="5.5" r="1.1" />
+                <circle cx="18.5" cy="18.5" r="1.1" />
+                <circle cx="5.5" cy="18.5" r="1.1" />
+              </g>
+            </svg>
+            <svg class="moon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" fill="currentColor" />
+            </svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main style="padding:28px 18px;">
+    <div class="app-area" style="max-width:1000px;margin:18px auto;padding:24px;">
+      <h1>Bağlama Eğitimi</h1>
+      <p>Bağlama öğrenmeye hoşgeldiniz! Bu sayfada temel teknikler, makamlar ve başlangıç düzeyinden ileri düzeye kadar
+        pratikler bulacaksınız.</p>
+
+      <div style="display:flex;gap:18px;align-items:flex-start;margin-top:18px;flex-wrap:wrap;">
+        <img src="assets/Bağlama_yatay.png" alt="Bağlama"
+          style="width:420px;max-width:100%;height:auto;border-radius:10px;box-shadow:var(--shadow);" loading="lazy"
+          decoding="async" />
+        <div style="flex:1;min-width:260px;">
+          <h3>Öne çıkan dersler</h3>
+          <ul>
+            <li>Temel akorlar ve tutuş</li>
+            <li>Ritim çalışmaları</li>
+            <li>Makam temelleri</li>
+            <li>Repertuar ve parçalar</li>
+          </ul>
+
+          <div id="heroAction" style="margin-top:24px;">
+            <!-- Button injected by JS -->
           </div>
 
-          <div class="header-auth" id="headerAuth">
-            <button id="headerSignupBtn" class="btn primary">Kayıt Ol</button>
-            <button id="headerSigninBtn" class="btn secondary">Giriş Yap</button>
-          </div>
-
-          <button class="theme-toggle" id="themeToggle" aria-label="Tema değiştir">
-            <span class="toggle-track" aria-hidden="true"></span>
-            <span class="toggle-knob" aria-hidden="true">
-              <svg class="sun" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="12" cy="12" r="5" fill="currentColor" />
-                <g fill="currentColor">
-                  <circle cx="12" cy="3" r="1.1" />
-                  <circle cx="12" cy="21" r="1.1" />
-                  <circle cx="21" cy="12" r="1.1" />
-                  <circle cx="3" cy="12" r="1.1" />
-                  <circle cx="18.5" cy="5.5" r="1.1" />
-                  <circle cx="5.5" cy="5.5" r="1.1" />
-                  <circle cx="18.5" cy="18.5" r="1.1" />
-                  <circle cx="5.5" cy="18.5" r="1.1" />
-                </g>
-              </svg>
-              <svg class="moon" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" fill="currentColor" />
-              </svg>
-            </span>
-          </button>
+          <p style="margin-top:18px;"><a href="anasayfa.html" class="btn secondary">Geri Dön</a></p>
         </div>
       </div>
-    </header>
 
-    <main style="padding:28px 18px;">
-      <div class="app-area" style="max-width:1000px;margin:18px auto;padding:24px;">
-        <h1>Bağlama Eğitimi</h1>
-        <p>Bağlama öğrenmeye hoşgeldiniz! Bu sayfada temel teknikler, makamlar ve başlangıç düzeyinden ileri düzeye kadar pratikler bulacaksınız.</p>
+      <!-- Dynamic Accordion -->
+      <div id="courseAccordion" class="baglama-accordion" aria-live="polite" style="margin-top:32px;"></div>
 
-        <div style="display:flex;gap:18px;align-items:flex-start;margin-top:18px;flex-wrap:wrap;">
-          <img src="assets/Bağlama_yatay.png" alt="Bağlama" style="width:420px;max-width:100%;height:auto;border-radius:10px;box-shadow:var(--shadow);" loading="lazy" decoding="async"/>
-          <div style="flex:1;min-width:260px;">
-            <h3>Öne çıkan dersler</h3>
-            <ul>
-              <li>Temel akorlar ve tutuş</li>
-              <li>Ritim çalışmaları</li>
-              <li>Makam temelleri</li>
-              <li>Repertuar ve parçalar</li>
-            </ul>
-            <p style="margin-top:12px;">
-              Bu içerik örnek amaçlıdır. Gerçek ders materyalini ve interaktif kursları yakında ekleyeceğiz.
-            </p>
-            <p style="margin-top:18px;"><a href="anasayfa.html" class="btn secondary">Geri Dön</a></p>
-          </div>
-        </div>
+    </div>
+  </main>
 
-        <!-- Accordion with 5 main training sections; content panels are empty placeholders for now -->
-        <div class="baglama-accordion" aria-live="polite">
-          <div class="accordion-section">
-            <div class="accordion-header">
-              <div class="title">Giriş ve Tanışma</div>
-              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-1" title="Aç/Kapat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            <div id="section-1" class="accordion-content" hidden>
-              <!-- Eğitim yolu: adacık (module chain) gösterimi -->
-              <div class="module-chain" role="list">
-                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 1: Hocayı tanıyalım">
-                  <div class="module-avatar">
-                    <img src="assets/yeniruh.svg" alt="Hocayı tanıyalım">
-                  </div>
-                  <div class="module-title">Hocayı tanıyalım</div>
-                </a>
-                <div class="module-connector" aria-hidden="true"></div>
-                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 2: Bağlamanın tarihi">
-                  <div class="module-avatar">
-                    <img src="assets/Bağlama_yatay.png" alt="Bağlamanın tarihi">
-                  </div>
-                  <div class="module-title">Bağlamanın tarihi</div>
-                </a>
-                <div class="module-connector" aria-hidden="true"></div>
-                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 3: Bağlamanın Bölümleri">
-                  <div class="module-avatar">
-                    <img src="assets/Bağlama_yatay.png" alt="Bağlamanın bölümleri">
-                  </div>
-                  <div class="module-title">Bağlamanın Bölümleri</div>
-                </a>
-                <div class="module-connector" aria-hidden="true"></div>
-                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 4: Bağlamanın Tutuşu">
-                  <div class="module-avatar">
-                    <img src="assets/Bağlama_yatay.png" alt="Bağlamanın tutuşu">
-                  </div>
-                  <div class="module-title">Bağlamanın Tutuşu</div>
-                </a>
-                <div class="module-connector" aria-hidden="true"></div>
-                <a href="#" class="module-item" role="listitem" aria-label="Bölüm 5: Özet">
-                  <div class="module-avatar">
-                    <img src="assets/Bağlama_yatay.png" alt="Özet">
-                  </div>
-                  <div class="module-title">Özet</div>
-                </a>
-              </div>
-            </div>
-          </div>
+  <footer>
+    <small>© <span id="year">2025</span> AF-GROOVE</small>
+  </footer>
 
-          <div class="accordion-section">
-            <div class="accordion-header">
-              <div class="title">Temel Teknikler</div>
-              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-2" title="Aç/Kapat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            <div id="section-2" class="accordion-content" hidden></div>
-          </div>
+  <script src="script.js" defer></script>
+  <script>
+    // keep homepage redirect disabled
+    window.AG_DISABLE_HOME_REDIRECT = true;
 
-          <div class="accordion-section">
-            <div class="accordion-header">
-              <div class="title">Ritim ve Çalışmalar</div>
-              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-3" title="Aç/Kapat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            <div id="section-3" class="accordion-content" hidden></div>
-          </div>
+    document.addEventListener('DOMContentLoaded', function () {
+      renderCourseContent();
+      updateHeroAction();
+    });
 
-          <div class="accordion-section">
-            <div class="accordion-header">
-              <div class="title">Makam ve Teori</div>
-              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-4" title="Aç/Kapat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            <div id="section-4" class="accordion-content" hidden></div>
-          </div>
+    function renderCourseContent() {
+      const course = window.getCourse ? window.getCourse('baglama') : null;
+      if (!course) return;
 
-          <div class="accordion-section">
-            <div class="accordion-header">
-              <div class="title">Repertuar ve İleri Düzey</div>
-              <button class="accordion-toggle" aria-expanded="false" aria-controls="section-5" title="Aç/Kapat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            <div id="section-5" class="accordion-content" hidden></div>
-          </div>
-        </div>
-      </div>
-    </main>
+      const container = document.getElementById('courseAccordion');
+      container.innerHTML = '';
 
-    <footer>
-      <small>© <span id="year">2025</span> AF-GROOVE</small>
-    </footer>
+      // For Learning Path design, we might want to flatten sections or show them as groups on the path.
+      // Let's iterate sections but render them as a continuous path.
+      // We also need user progress to determine states.
 
-    <script src="script.js" defer></script>
-    <script>
-      // keep homepage redirect disabled for this standalone content page
-      window.AG_DISABLE_HOME_REDIRECT = true;
+      const userId = localStorage.getItem('ag_last_uid') || 'guest';
+      const progressKey = `ag_progress_${userId}`;
+      let progress = {};
+      try { progress = JSON.parse(localStorage.getItem(progressKey)) || {}; } catch (_) { }
 
-      // Accordion toggle behavior for Bağlama Eğitimi
-      document.addEventListener('DOMContentLoaded', function(){
-        const toggles = Array.from(document.querySelectorAll('.accordion-toggle'));
-        toggles.forEach(btn=>{
-          const panelId = btn.getAttribute('aria-controls');
-          const panel = document.getElementById(panelId);
-          // ensure initial aria state
-          btn.setAttribute('aria-expanded', 'false');
+      let foundNext = false; // flag to find the first non-completed (current) item
 
-          // header click toggles too
-          const header = btn.closest('.accordion-section').querySelector('.accordion-header');
-          if(header){
-            header.addEventListener('click', (e)=>{
-              // prevent double toggle when clicking the button itself
-              if(e.target.closest('.accordion-toggle')) return;
-              btn.click();
-            });
+      course.sections.forEach((section, sIdx) => {
+        // Section Title Marker
+        const secTitle = document.createElement('div');
+        secTitle.style.textAlign = 'center';
+        secTitle.style.margin = '32px 0 16px 0';
+        secTitle.style.fontWeight = '700';
+        secTitle.style.color = 'var(--accent)';
+        secTitle.style.textTransform = 'uppercase';
+        secTitle.style.letterSpacing = '1px';
+        secTitle.textContent = section.title;
+        container.appendChild(secTitle);
+
+        const pathContainer = document.createElement('div');
+        pathContainer.className = 'learning-path';
+
+        section.modules.forEach((mod, mIdx) => {
+          const isCompleted = !!progress[mod.id];
+          let state = 'locked';
+
+          if (isCompleted) {
+            state = 'completed';
+          } else if (!foundNext) {
+            state = 'current';
+            foundNext = true;
+          } else {
+            state = 'locked';
           }
 
-          btn.addEventListener('click', ()=>{
-            const isOpen = btn.getAttribute('aria-expanded') === 'true';
-            // close any other open panels (single-open behavior)
-            if(!isOpen){
-              document.querySelectorAll('.accordion-content.open').forEach(open=>{
-                const otherBtn = document.querySelector(`[aria-controls="${open.id}"]`);
-                if(otherBtn) otherBtn.setAttribute('aria-expanded','false');
-                open.style.maxHeight = open.scrollHeight + 'px';
-                // allow transition to kick in
-                requestAnimationFrame(()=>{
-                  open.style.maxHeight = '0px';
-                });
-                open.addEventListener('transitionend', function te(){
-                  open.hidden = true; open.classList.remove('open'); open.style.maxHeight = '';
-                  open.removeEventListener('transitionend', te);
-                });
-              });
-            }
+          const step = document.createElement('div');
+          step.className = `path-step ${state}`;
 
-            if(isOpen){
-              // close this panel
-              panel.style.maxHeight = panel.scrollHeight + 'px';
-              requestAnimationFrame(()=>{ panel.style.maxHeight = '0px'; });
-              panel.addEventListener('transitionend', function te(){ panel.hidden = true; panel.classList.remove('open'); panel.style.maxHeight = ''; panel.removeEventListener('transitionend', te); });
-              btn.setAttribute('aria-expanded','false');
-            } else {
-              // open this panel
-              panel.hidden = false;
-              panel.classList.add('open');
-              // set to measured height
-              const height = panel.scrollHeight;
-              panel.style.maxHeight = height + 'px';
-              btn.setAttribute('aria-expanded','true');
-            }
-          });
+          // Determine icon
+          let iconHtml = '';
+          if (mod.type === 'quiz') {
+            iconHtml = '<span class="node-icon-text">?</span>';
+          } else {
+            // Use svg/img or default
+            iconHtml = `<img src="${mod.poster || 'assets/afgroove-full.svg'}" alt="">`;
+          }
+
+          // If completed, maybe checkmark overlay? handled by css filter for now.
+
+          step.innerHTML = `
+              <div class="path-node" title="${state}">
+                  ${iconHtml}
+              </div>
+              <div class="path-label">
+                  <h4>${mod.title}</h4>
+                  <p>${mod.description || (mod.type === 'video' ? mod.duration : 'Test')}</p>
+              </div>
+           `;
+          pathContainer.appendChild(step);
         });
+
+        container.appendChild(pathContainer);
       });
-    </script>
-    <script src="firebase-auth.js" defer></script>
-  </body>
+    }
+
+    // Existing updateHeroAction remains same...
+    function updateHeroAction() {
+      const userId = localStorage.getItem('ag_last_uid') || 'guest';
+      const progressKey = `ag_progress_${userId}`;
+      let progress = {};
+      try { progress = JSON.parse(localStorage.getItem(progressKey)) || {}; } catch (_) { }
+
+      const course = window.getCourse('baglama');
+      let targetModuleId = null;
+      let isContinue = false;
+
+      // Find first incomplete module
+      for (const sec of course.sections) {
+        for (const mod of sec.modules) {
+          if (!progress[mod.id]) {
+            targetModuleId = mod.id;
+            break;
+          } else {
+            isContinue = true;
+          }
+        }
+        if (targetModuleId) break;
+      }
+
+      // If all done
+      if (!targetModuleId) {
+        targetModuleId = course.sections[0].modules[0].id; // Fallback or certificate page
+      }
+
+      const btnArea = document.getElementById('heroAction');
+      const label = isContinue ? "Kursa Devam Et" : "Kursa Başla";
+
+      // Update: use a bigger, pulsing button styling if available or just standar
+      btnArea.innerHTML = `
+            <a href="player.html?course=baglama&module=${targetModuleId}" class="btn primary" style="text-decoration:none;display:inline-block;padding:16px 32px;font-size:18px;">
+               ${label}
+            </a>
+         `;
+    }
+
+    // Removed old toggleSection logic as it is not used in the path view
+    // (Or kept if we want to revert, but better clean up)
+    window.toggleSection = null;
+
+
+  </script>
+  <script src="firebase-auth.js" defer></script>
+</body>
+
 </html>

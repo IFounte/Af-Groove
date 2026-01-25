@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eğitim Oynatıcı - AF-GROOVE</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Player specific styles -->
+    <style>
+      body { overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+      header.top { flex: 0 0 auto; z-index: 100; }
+      
+      .player-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        height: 100%;
+      }
+      
+      /* Sidebar */
+      .sidebar {
+        width: 300px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s ease;
+        z-index: 50;
+      }
+      
+      .sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      
+      .course-outline {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+      }
+      
+      .outline-section-title {
+        padding: 12px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        background: rgba(0,0,0,0.1);
+      }
+      
+      .outline-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        transition: background 0.2s;
+        text-decoration: none;
+        color: var(--text);
+      }
+      
+      .outline-item:hover {
+        background: var(--glass);
+      }
+      
+      .outline-item.active {
+        background: color-mix(in srgb, var(--accent) 15%, transparent);
+        border-left: 3px solid var(--accent);
+      }
+      
+      .outline-item.completed .status-icon {
+        color: var(--accent);
+      }
+      
+      .status-icon {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--muted);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      
+      .status-icon svg { width: 12px; height: 12px; display: none; }
+      .outline-item.completed .status-icon { border-color: var(--accent); background: var(--accent); color: var(--surface); }
+      .outline-item.completed .status-icon svg { display: block; }
+      
+      /* Main Content */
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        position: relative;
+        background: #000;
+      }
+      
+      .content-area {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        position: relative;
+      }
+      
+      /* Video Player Container */
+      .video-wrapper {
+        width: 100%;
+        height: 100%;
+        max-width: 1200px;
+        max-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: black;
+      }
+      
+      iframe, video {
+        width: 100%;
+        height: 100%;
+        aspect-ratio: 16/9;
+        border: 0;
+      }
+      
+      /* Quiz UI */
+      .quiz-container {
+        max-width: 800px;
+        width: 90%;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: var(--shadow);
+      }
+      
+      .quiz-question {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 24px;
+      }
+      
+      .quiz-options {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .quiz-option {
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      .quiz-option:hover {
+        background: var(--glass);
+        border-color: var(--muted);
+      }
+      
+      .quiz-option.selected {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+      }
+      
+      .quiz-option.correct {
+         border-color: #2ecc71;
+         background: rgba(46, 204, 113, 0.15);
+      }
+      
+      .quiz-option.wrong {
+         border-color: #e74c3c;
+         background: rgba(231, 76, 60, 0.15);
+      }
+      
+      .quiz-footer {
+        margin-top: 24px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      
+      /* Bottom Navigation Bar */
+      .bottom-bar {
+        height: 70px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        z-index: 60;
+      }
+      
+      .nav-meta h2 {
+        font-size: 16px;
+        margin: 0;
+      }
+      .nav-meta p {
+         font-size: 13px;
+         color: var(--muted);
+         margin: 2px 0 0 0;
+      }
+      
+      .nav-controls {
+        display: flex;
+        gap: 12px;
+      }
+      
+      @media (max-width: 768px) {
+        .player-layout { flex-direction: column; }
+        .sidebar { 
+          position: absolute; 
+          left: 0; top: 0; bottom: 0; 
+          transform: translateX(-100%);
+        }
+        .sidebar.open { transform: translateX(0); }
+        .bottom-bar { padding: 0 12px; }
+        .nav-meta { display: none; } /* hide title on mobile to save space */
+      }
+    </style>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+  </head>
+  <body>
+  
+    <header class="top">
+      <div class="top-inner" style="max-width: 100%; padding: 0 16px;">
+        <div class="brand">
+          <a href="baglama.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);">
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+             <span style="font-weight:700;">Kursa Dön</span>
+          </a>
+        </div>
+        
+        <div class="top-controls">
+          <button id="toggleSidebar" class="btn secondary" style="padding: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+          <div id="userArea" class="user-area"></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="player-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span id="courseTitle">Bağlama Eğitimi</span>
+        </div>
+        <div class="course-outline" id="courseOutline">
+          <!-- Dynamic Content -->
+        </div>
+      </aside>
+      
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="content-area" id="contentArea">
+          <!-- Content injected here -->
+          <div style="color:var(--muted);">Lütfen bir ders seçiniz...</div>
+        </div>
+        
+        <div class="bottom-bar">
+          <div class="nav-meta">
+            <h2 id="activeModuleTitle">...</h2>
+            <p id="activeModuleDesc">...</p>
+          </div>
+          <div class="nav-controls">
+            <button id="prevBtn" class="btn secondary" disabled>‹ Önceki</button>
+            <button id="completeBtn" class="btn primary">Tamamla & Geç ›</button>
+            <button id="nextBtn" class="btn secondary" style="display:none;">Sonraki ›</button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="course-data.js"></script>
+    <script src="achievements.js"></script>
+    <script src="script.js"></script>
+    <script src="firebase-auth.js"></script>
+    
+    <script>
+      // State
+      let currentCourseId = null;
+      let currentModuleId = null;
+      let currentCourseData = null;
+      let userProgress = {}; // { [moduleId]: true/false }
+      let flatModules = []; // helper array for next/prev
+      
+      const userId = localStorage.getItem('ag_last_uid') || 'guest';
+      const progressKey = `ag_progress_${userId}`;
+
+      // Initialize
+      document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        currentCourseId = params.get('course') || 'baglama';
+        currentModuleId = params.get('module');
+        
+        loadProgress();
+        loadCourse(currentCourseId);
+        
+        // Sidebar toggle
+        document.getElementById('toggleSidebar').addEventListener('click', () => {
+          document.getElementById('sidebar').classList.toggle('open');
+          // For desktop, maybe collapse? CSS handles .open for mobile, need desktop collapse logic if desired.
+          // For now simple mobile toggle.
+        });
+        
+        // Navigation buttons
+        document.getElementById('prevBtn').addEventListener('click', goToPrev);
+        document.getElementById('completeBtn').addEventListener('click', () => completeModule(true));
+        document.getElementById('nextBtn').addEventListener('click', goToNext);
+      });
+
+      function loadProgress() {
+        try {
+          userProgress = JSON.parse(localStorage.getItem(progressKey)) || {};
+        } catch(e) { userProgress = {}; }
+      }
+      
+      function saveProgress() {
+        localStorage.setItem(progressKey, JSON.stringify(userProgress));
+      }
+
+      function loadCourse(id) {
+        currentCourseData = window.getCourse(id);
+        if(!currentCourseData) {
+            alert('Kurs bulunamadı!');
+            return;
+        }
+        
+        document.getElementById('courseTitle').textContent = currentCourseData.title;
+        renderOutline();
+        
+        // Flatten modules for navigation lookup
+        flatModules = [];
+        currentCourseData.sections.forEach(sec => {
+            sec.modules.forEach(mod => {
+                flatModules.push(mod);
+            });
+        });
+        
+        // If specific module requested, load it, otherwise load first
+        if (currentModuleId) {
+            loadModule(currentModuleId);
+        } else if (flatModules.length > 0) {
+            loadModule(flatModules[0].id);
+        }
+      }
+
+      function renderOutline() {
+        const container = document.getElementById('courseOutline');
+        container.innerHTML = '';
+        
+        currentCourseData.sections.forEach(section => {
+          const secTitle = document.createElement('div');
+          secTitle.className = 'outline-section-title';
+          secTitle.textContent = section.title;
+          container.appendChild(secTitle);
+          
+          section.modules.forEach(mod => {
+            const item = document.createElement('a');
+            item.className = 'outline-item';
+            item.id = `nav-${mod.id}`;
+            item.href = `javascript:loadModule('${mod.id}')`;
+            if(userProgress[mod.id]) item.classList.add('completed');
+            
+            item.innerHTML = `
+              <div class="status-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <div class="item-info">
+                <div style="font-size:14px;font-weight:500;">${mod.title}</div>
+                <div style="font-size:12px;color:var(--muted);">${mod.type === 'video' ? mod.duration : 'Test'}</div>
+              </div>
+            `;
+            container.appendChild(item);
+          });
+        });
+      }
+
+      window.loadModule = function(modId) {
+        currentModuleId = modId;
+        const mod = flatModules.find(m => m.id === modId);
+        if(!mod) return;
+        
+        // Active visual state
+        document.querySelectorAll('.outline-item').forEach(el => el.classList.remove('active'));
+        const navItem = document.getElementById(`nav-${modId}`);
+        if(navItem) navItem.classList.add('active');
+        
+        // Update header
+        document.getElementById('activeModuleTitle').textContent = mod.title;
+        document.getElementById('activeModuleDesc').textContent = mod.description || (mod.type === 'quiz' ? 'Bilgimizi ölçelim' : 'İyi seyirler');
+        
+        // Render Content
+        const contentArea = document.getElementById('contentArea');
+        contentArea.innerHTML = '';
+        
+        if (mod.type === 'video') {
+            renderVideo(mod, contentArea);
+            showNavButtons('video');
+        } else if (mod.type === 'quiz') {
+            renderQuiz(mod, contentArea);
+            showNavButtons('quiz');
+        }
+        
+        updateNavButtonStates();
+      }
+
+      function renderVideo(mod, container) {
+        // Placeholder for video
+        // In real app, check mod.videoUrl or mod.embedUrl
+        const wrapper = document.createElement('div');
+        wrapper.className = 'video-wrapper';
+        
+        if (mod.videoUrl) {
+           // Direct video file
+           wrapper.innerHTML = `<video controls poster="${mod.poster || ''}"><source src="${mod.videoUrl}" type="video/mp4">Tarayıcınız video desteklemiyor.</video>`;
+        } else {
+           // Placeholder UI
+           wrapper.innerHTML = `
+             <div style="text-align:center;color:white;">
+               <img src="${mod.poster || 'assets/afgroove-full.svg'}" style="max-height:200px;margin-bottom:20px;opacity:0.8;">
+               <h3>${mod.title}</h3>
+               <p>Video oynatıcı simülasyonu</p>
+               <button class="btn primary" onclick="document.getElementById('completeBtn').click()">Simüle Et: Video Bitti</button>
+             </div>
+           `;
+        }
+        container.appendChild(wrapper);
+      }
+
+      function renderQuiz(mod, container) {
+        let currentQuestion = 0;
+        let score = 0;
+        
+        const quizDiv = document.createElement('div');
+        quizDiv.className = 'quiz-container';
+        
+        // Simple 1-question-at-a-time or all-at-once. Let's do simple all-at-once for mvp.
+        const qHtml = mod.questions.map((q, idx) => `
+            <div class="quiz-item" data-idx="${idx}">
+                <div class="quiz-question">${idx+1}. ${q.text}</div>
+                <div class="quiz-options">
+                    ${q.options.map((opt, oIdx) => `
+                        <div class="quiz-option" onclick="selectOption(this, ${idx}, ${oIdx})">${opt}</div>
+                    `).join('')}
+                </div>
+            </div>
+            <hr style="border:0;border-top:1px solid var(--border);margin:24px 0;">
+        `).join('');
+        
+        quizDiv.innerHTML = `
+            ${qHtml}
+            <div class="quiz-footer">
+                <button class="btn primary" id="submitQuizBtn" onclick="submitQuiz()">Testi Bitir</button>
+            </div>
+            <div id="quizResult" style="margin-top:16px;text-align:center;display:none;"></div>
+        `;
+        
+        container.appendChild(quizDiv);
+        
+        // Store correct answers in DOM or closure for validation
+        quizDiv._answers = mod.questions.map(q => q.correctIndex);
+      }
+
+      window.selectOption = function(el, qIdx, oIdx) {
+        // Deselect others in this question
+        const parent = el.parentElement;
+        parent.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+        el.dataset.val = oIdx;
+      }
+      
+      window.submitQuiz = function() {
+        const container = document.querySelector('.quiz-container');
+        const correctAnswers = container._answers;
+        let correctCount = 0;
+        let allAnswered = true;
+        
+        correctAnswers.forEach((ans, idx) => {
+            const item = container.querySelector(`.quiz-item[data-idx="${idx}"]`);
+            const selected = item.querySelector('.quiz-option.selected');
+            if(!selected) { allAnswered = false; return; }
+            
+            const val = parseInt(selected.dataset.val);
+            if(val === ans) {
+                correctCount++;
+                selected.classList.add('correct');
+            } else {
+                selected.classList.add('wrong');
+                // Highlight correct one
+                item.querySelectorAll('.quiz-option')[ans].classList.add('correct');
+            }
+        });
+        
+        if(!allAnswered) {
+            alert('Lütfen tüm soruları cevaplayınız.');
+            return;
+        }
+        
+        const resultDiv = document.getElementById('quizResult');
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<h3>Sonuç: ${correctCount} / ${correctAnswers.length} Doğru</h3>`;
+        
+        // If score > 50% (or whatever logic), mark complete
+        if(correctCount >= correctAnswers.length / 2) {
+             completeModule(false); // don't auto-nav, let them see result
+             document.getElementById('completeBtn').textContent = "Devam Et ›";
+        }
+      }
+
+      function showNavButtons(type) {
+        const btn = document.getElementById('completeBtn');
+        if(type === 'quiz') {
+            btn.style.display = 'block'; 
+            btn.disabled = true; // wait for quiz submit
+            document.getElementById('submitQuizBtn').addEventListener('click', () => {
+                 // re-enable continue button after submit (logic inside submitQuiz could enable it)
+                 btn.disabled = false;
+            });
+        } else {
+             btn.style.display = 'block';
+             btn.disabled = false;
+             btn.textContent = "Tamamla & Geç ›";
+        }
+      }
+
+      function completeModule(autoNext) {
+        if(!currentModuleId) return;
+        
+        // 1. Mark in userProgress
+        userProgress[currentModuleId] = true;
+        saveProgress();
+        
+        // 2. Update Sidebar UI
+        const navItem = document.getElementById(`nav-${currentModuleId}`);
+        if(navItem) navItem.classList.add('completed');
+        
+        // 3. Trigger Achievement Event
+        // We need the firebase user object roughly; but achievements.js handles uid strings in some funcs?
+        // Let's use window.achievementEvent wrapper
+        const dummyUser = { uid: userId }; 
+        if(window.achievementEvent) {
+            window.achievementEvent(dummyUser, 'course_step');
+             // check if course finished? logic for that later
+        }
+
+        // 4. Next
+        if(autoNext) goToNext();
+      }
+      
+      function goToNext() {
+        const idx = flatModules.findIndex(m => m.id === currentModuleId);
+        if(idx < flatModules.length - 1) {
+            loadModule(flatModules[idx + 1].id);
+        } else {
+            alert('Tebrikler! Kursu tamamladınız.');
+        }
+      }
+      
+      function goToPrev() {
+        const idx = flatModules.findIndex(m => m.id === currentModuleId);
+        if(idx > 0) {
+            loadModule(flatModules[idx - 1].id);
+        }
+      }
+      
+      function updateNavButtonStates() {
+         const idx = flatModules.findIndex(m => m.id === currentModuleId);
+         document.getElementById('prevBtn').disabled = (idx <= 0);
+      }
+      
+    </script>
+  </body>
+</html>

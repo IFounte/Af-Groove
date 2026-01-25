@@ -789,15 +789,168 @@ footer{padding:18px;text-align:center;color:var(--muted);margin-top:auto}
   border-radius:12px;
   z-index:0;
 }
-/* Replace flame icon with animated fiery border */
-.day.has-visit::after{
-  content:"";
-  position:absolute;inset:-2px;border-radius:14px;z-index:2;pointer-events:none;
-  background:
-    conic-gradient(from 0deg, rgba(255,150,0,0.0), rgba(255,120,0,0.45), rgba(255,60,0,0.0) 40%, rgba(255,150,0,0.0) 100%);
-  filter: blur(10px) saturate(1.2);
-  animation: flameRing 2.6s linear infinite;
+/* Learning Path UI */
+.learning-path {
+  position: relative;
+  padding: 20px 0;
+  max-width: 600px;
+  margin: 0 auto;
 }
+
+/* Vertical line behind nodes */
+.learning-path::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  background: var(--border);
+  transform: translateX(-50%);
+  z-index: 0;
+  border-radius: 4px;
+}
+
+.path-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 48px;
+  z-index: 1;
+}
+
+.path-step:last-child {
+  margin-bottom: 0;
+}
+
+/* Node circle */
+.path-node {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 4px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  cursor: default; /* Not clickable directly in this design, action button handles it */
+}
+
+/* Icons inside node */
+.path-node img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  opacity: 0.6;
+  filter: grayscale(100%);
+  transition: all 0.3s;
+}
+
+.path-node .node-icon-text {
+  font-weight: 800;
+  color: var(--muted);
+  font-size: 20px;
+}
+
+/* States */
+/* Locked */
+.path-step.locked .path-node {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+/* Current / Unlocked but next */
+.path-step.current .path-node {
+  border-color: var(--accent);
+  background: var(--surface);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 8px rgba(123, 211, 137, 0.2), 0 8px 24px rgba(0,0,0,0.25);
+}
+.path-step.current .path-node img {
+  opacity: 1;
+  filter: none;
+}
+
+/* Completed */
+.path-step.completed .path-node {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.path-step.completed .path-node img {
+  filter: brightness(0) invert(1);
+  opacity: 1;
+}
+/* Checkmark for completed can be added via pseudo element or changing icon */
+
+/* Labels (alternating sides) */
+.path-label {
+  position: absolute;
+  width: 180px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s;
+}
+
+.path-step:nth-child(odd) .path-label {
+  left: calc(50% + 50px);
+  text-align: left;
+}
+
+.path-step:nth-child(even) .path-label {
+  right: calc(50% + 50px);
+  text-align: right;
+}
+
+.path-step.locked .path-label {
+  opacity: 0.6;
+}
+
+.path-label h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.path-label p {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  .learning-path {
+    max-width: 100%;
+    padding-left: 20px;
+  }
+  .learning-path::before {
+    left: 40px; /* Line aligned to left */
+  }
+  .path-step {
+    justify-content: flex-start;
+    margin-left: 8px;
+  }
+  .path-label {
+    position: relative;
+    top: auto;
+    transform: none;
+    left: auto !important;
+    right: auto !important;
+    margin-left: 24px;
+    width: auto;
+    flex: 1;
+    text-align: left !important;
+  }
+}
+
 @keyframes flameRing{
   0%{ transform: rotate(0deg); opacity: .9; }
   50%{ opacity: .7; }
